@@ -27,6 +27,7 @@ const AnimatedRoutes = () => {
         <Route path="/brand/setup" element={<Setup />} />
         <Route path="/consumer" element={<ConsumerFeedback />} />
         <Route path="/consumer/:questionId" element={<ConsumerFeedback />} />
+        <Route path="/survey/:surveyId" element={<ConsumerFeedback />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </AnimatePresence>

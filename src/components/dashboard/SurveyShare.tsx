@@ -1,0 +1,60 @@
+
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { CheckCircle, ClipboardCopy } from 'lucide-react';
+import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
+
+interface ShareSurveyProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  surveyLink: string;
+}
+
+const SurveyShare = ({ open, onOpenChange, surveyLink }: ShareSurveyProps) => {
+  const [linkCopied, setLinkCopied] = useState(false);
+  const { toast } = useToast();
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(surveyLink);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+    toast({
+      title: "Link copied",
+      description: "Survey link copied to clipboard"
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Share Survey</DialogTitle>
+          <DialogDescription>
+            Copy the link below to share this survey with your customers.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="flex items-center gap-2 mt-4">
+          <Input value={surveyLink} readOnly className="flex-1" />
+          <Button variant="outline" size="icon" onClick={copyToClipboard}>
+            {linkCopied ? (
+              <CheckCircle className="h-4 w-4 text-green-500" />
+            ) : (
+              <ClipboardCopy className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+        
+        <div className="mt-4 p-4 bg-muted rounded-md">
+          <p className="text-sm text-muted-foreground">
+            Share this link with your customers to collect their feedback. Responses will appear on your dashboard automatically.
+          </p>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export default SurveyShare;
