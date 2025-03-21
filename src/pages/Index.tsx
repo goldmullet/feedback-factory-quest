@@ -38,7 +38,7 @@ const Index = () => {
             variants={fadeIn}
           >
             <h1 className="text-6xl md:text-7xl font-bold tracking-tight mb-8 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-400">
-              Voice Feedback Platform for E-commerce
+              Hear What Your Customers Really Think
             </h1>
             <p className="text-xl md:text-2xl text-slate-600 dark:text-slate-300 mb-10 leading-relaxed">
               Collect authentic customer feedback through voice recordings. 
