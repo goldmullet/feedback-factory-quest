@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -63,6 +64,10 @@ export default {
 					ring: 'hsl(var(--sidebar-ring))'
 				}
 			},
+			fontFamily: {
+				sans: ['SF Pro Display', 'system-ui', 'sans-serif'],
+				serif: ['Georgia', 'serif'],
+			},
 			borderRadius: {
 				lg: 'var(--radius)',
 				md: 'calc(var(--radius) - 2px)',
@@ -84,11 +89,47 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'pulse-recording': {
+					'0%, 100%': { 
+						opacity: '1', 
+						transform: 'scale(1)' 
+					},
+					'50%': { 
+						opacity: '0.8', 
+						transform: 'scale(1.05)' 
+					},
+				},
+				'fade-in': {
+					from: { 
+						opacity: '0',
+						transform: 'translateY(10px)' 
+					},
+					to: { 
+						opacity: '1',
+						transform: 'translateY(0)' 
+					},
+				},
+				'wave': {
+					'0%': { transform: 'scaleY(1)' },
+					'50%': { transform: 'scaleY(0.5)' },
+					'100%': { transform: 'scaleY(1)' }
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'pulse-recording': 'pulse-recording 2s ease-in-out infinite',
+				'fade-in': 'fade-in 0.5s ease-out',
+				'wave': 'wave 1s ease-in-out infinite'
+			},
+			backdropBlur: {
+				xs: '2px',
+			},
+			boxShadow: {
+				'glass': '0 4px 30px rgba(0, 0, 0, 0.1)',
+				'button': '0 1px 2px rgba(0, 0, 0, 0.1)',
+				'card': '0 8px 32px rgba(0, 0, 0, 0.08)',
 			}
 		}
 	},
