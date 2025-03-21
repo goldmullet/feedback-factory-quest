@@ -18,6 +18,31 @@ interface Feedback {
   createdAt: Date;
 }
 
+interface SurveyQuestion {
+  id: string;
+  text: string;
+  description?: string;
+}
+
+interface Survey {
+  id: string;
+  brandId: string;
+  title: string;
+  description?: string;
+  questions: SurveyQuestion[];
+  createdAt: Date;
+}
+
+interface SurveyResponse {
+  id: string;
+  surveyId: string;
+  answers: {
+    questionId: string;
+    answer: string;
+  }[];
+  createdAt: Date;
+}
+
 interface Brand {
   id: string;
   name: string;
@@ -29,9 +54,13 @@ interface FeedbackContextType {
   brands: Brand[];
   questions: Question[];
   feedback: Feedback[];
+  surveys: Survey[];
+  surveyResponses: SurveyResponse[];
   addBrand: (name: string) => void;
   addQuestion: (brandId: string, text: string, description?: string) => void;
   addFeedback: (questionId: string, audioBlob: Blob) => void;
+  addSurvey: (brandId: string, title: string, description: string, questions: {text: string, description: string}[]) => string;
+  addSurveyResponse: (surveyId: string, answers: {questionId: string, answer: string}[]) => void;
   getCurrentBrand: () => Brand | undefined;
   setCurrentBrandId: (id: string) => void;
 }
@@ -72,6 +101,8 @@ export const FeedbackProvider = ({ children }: { children: ReactNode }) => {
   ]);
   
   const [feedback, setFeedback] = useState<Feedback[]>([]);
+  const [surveys, setSurveys] = useState<Survey[]>([]);
+  const [surveyResponses, setSurveyResponses] = useState<SurveyResponse[]>([]);
   const [currentBrandId, setCurrentBrandId] = useState<string>('brand-1');
 
   const addBrand = (name: string) => {
@@ -130,6 +161,40 @@ export const FeedbackProvider = ({ children }: { children: ReactNode }) => {
     }, 2000);
   };
 
+  const addSurvey = (brandId: string, title: string, description: string, questionsList: {text: string, description: string}[]) => {
+    const surveyId = `survey-${Date.now()}`;
+    
+    // Create survey questions with unique IDs
+    const surveyQuestions: SurveyQuestion[] = questionsList.map(q => ({
+      id: `sq-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      text: q.text,
+      description: q.description
+    }));
+    
+    const newSurvey: Survey = {
+      id: surveyId,
+      brandId,
+      title,
+      description,
+      questions: surveyQuestions,
+      createdAt: new Date()
+    };
+    
+    setSurveys(prev => [...prev, newSurvey]);
+    return surveyId;
+  };
+
+  const addSurveyResponse = (surveyId: string, answers: {questionId: string, answer: string}[]) => {
+    const newResponse: SurveyResponse = {
+      id: `response-${Date.now()}`,
+      surveyId,
+      answers,
+      createdAt: new Date()
+    };
+    
+    setSurveyResponses(prev => [...prev, newResponse]);
+  };
+
   const getCurrentBrand = () => {
     return brands.find(brand => brand.id === currentBrandId);
   };
@@ -138,9 +203,13 @@ export const FeedbackProvider = ({ children }: { children: ReactNode }) => {
     brands,
     questions,
     feedback,
+    surveys,
+    surveyResponses,
     addBrand,
     addQuestion,
     addFeedback,
+    addSurvey,
+    addSurveyResponse,
     getCurrentBrand,
     setCurrentBrandId
   };

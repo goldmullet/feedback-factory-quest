@@ -1,17 +1,32 @@
-
 import { useState } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useFeedback } from '@/context/FeedbackContext';
-import { BarChart, LineChart, CircleHelp, AlertTriangle, Award, MessageSquare, Play } from 'lucide-react';
+import { BarChart, LineChart, CircleHelp, AlertTriangle, Award, MessageSquare, Play, Plus, Link as LinkIcon, ClipboardCopy, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
+import Question from '@/components/Question';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormDescription } from '@/components/ui/form';
+import { Textarea } from '@/components/ui/textarea';
 
 const BrandDashboard = () => {
-  const { feedback, questions, getCurrentBrand } = useFeedback();
+  const { feedback, questions, getCurrentBrand, addQuestion, addSurvey, surveys } = useFeedback();
   const [selectedTab, setSelectedTab] = useState('overview');
+  const [showNewSurveyDialog, setShowNewSurveyDialog] = useState(false);
+  const [surveyTitle, setSurveyTitle] = useState('');
+  const [surveyDescription, setSurveyDescription] = useState('');
+  const [surveyQuestions, setSurveyQuestions] = useState<{text: string, description: string}[]>([
+    {text: '', description: ''}
+  ]);
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const [currentSurveyShare, setCurrentSurveyShare] = useState('');
+  const [linkCopied, setLinkCopied] = useState(false);
   
+  const { toast } = useToast();
   const currentBrand = getCurrentBrand();
   
   // Calculate statistics
@@ -29,6 +44,84 @@ const BrandDashboard = () => {
   const recentFeedback = [...feedback]
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
     .slice(0, 5);
+
+  const handleAddQuestion = () => {
+    setSurveyQuestions([...surveyQuestions, {text: '', description: ''}]);
+  };
+
+  const handleQuestionChange = (index: number, value: string) => {
+    const newQuestions = [...surveyQuestions];
+    newQuestions[index].text = value;
+    setSurveyQuestions(newQuestions);
+  };
+
+  const handleDescriptionChange = (index: number, value: string) => {
+    const newQuestions = [...surveyQuestions];
+    newQuestions[index].description = value;
+    setSurveyQuestions(newQuestions);
+  };
+
+  const handleRemoveQuestion = (index: number) => {
+    if (surveyQuestions.length > 1) {
+      const newQuestions = [...surveyQuestions];
+      newQuestions.splice(index, 1);
+      setSurveyQuestions(newQuestions);
+    }
+  };
+
+  const handleCreateSurvey = () => {
+    // Validate
+    if (!surveyTitle.trim()) {
+      toast({
+        title: "Missing title",
+        description: "Please provide a title for your survey.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!surveyQuestions.some(q => q.text.trim())) {
+      toast({
+        title: "Missing questions",
+        description: "Please add at least one question to your survey.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Create survey
+    const validQuestions = surveyQuestions.filter(q => q.text.trim());
+    const surveyId = addSurvey(currentBrand?.id || '', surveyTitle, surveyDescription, validQuestions);
+
+    // Reset form
+    setSurveyTitle('');
+    setSurveyDescription('');
+    setSurveyQuestions([{text: '', description: ''}]);
+    setShowNewSurveyDialog(false);
+
+    toast({
+      title: "Survey created",
+      description: "Your survey has been created successfully."
+    });
+  };
+
+  const handleShareSurvey = (surveyId: string) => {
+    // Generate a shareable link for the survey
+    const shareableLink = `${window.location.origin}/survey/${surveyId}`;
+    setCurrentSurveyShare(shareableLink);
+    setShowShareDialog(true);
+    setLinkCopied(false);
+  };
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(currentSurveyShare);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+    toast({
+      title: "Link copied",
+      description: "Survey link copied to clipboard"
+    });
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -51,10 +144,11 @@ const BrandDashboard = () => {
           </div>
           
           <Tabs defaultValue="overview" className="space-y-8">
-            <TabsList className="grid w-full md:w-auto grid-cols-3 md:inline-flex gap-2">
+            <TabsList className="grid w-full md:w-auto grid-cols-4 md:inline-flex gap-2">
               <TabsTrigger value="overview" onClick={() => setSelectedTab('overview')}>Overview</TabsTrigger>
               <TabsTrigger value="feedback" onClick={() => setSelectedTab('feedback')}>Feedback</TabsTrigger>
               <TabsTrigger value="insights" onClick={() => setSelectedTab('insights')}>Insights</TabsTrigger>
+              <TabsTrigger value="surveys" onClick={() => setSelectedTab('surveys')}>Surveys</TabsTrigger>
             </TabsList>
             
             <TabsContent value="overview" className="space-y-8">
@@ -373,13 +467,184 @@ const BrandDashboard = () => {
                 </Card>
               </div>
             </TabsContent>
+
+            <TabsContent value="surveys" className="space-y-8">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold">Your Surveys</h2>
+                <Button onClick={() => setShowNewSurveyDialog(true)}>
+                  <Plus className="mr-2 h-4 w-4" /> Create New Survey
+                </Button>
+              </div>
+
+              {surveys.filter(s => s.brandId === currentBrand?.id).length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {surveys
+                    .filter(survey => survey.brandId === currentBrand?.id)
+                    .map(survey => (
+                      <Card key={survey.id} className="glass-effect">
+                        <CardHeader>
+                          <CardTitle>{survey.title}</CardTitle>
+                          {survey.description && (
+                            <CardDescription>{survey.description}</CardDescription>
+                          )}
+                        </CardHeader>
+                        <CardContent>
+                          <div className="text-sm text-muted-foreground mb-2">
+                            <span className="font-medium">{survey.questions.length}</span> questions
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            <span className="font-medium">Created:</span> {survey.createdAt.toLocaleDateString()}
+                          </div>
+                        </CardContent>
+                        <CardFooter className="flex justify-between">
+                          <Button variant="outline" size="sm">
+                            View Responses
+                          </Button>
+                          <Button 
+                            variant="secondary" 
+                            size="sm"
+                            onClick={() => handleShareSurvey(survey.id)}
+                          >
+                            <LinkIcon className="h-4 w-4 mr-2" /> Share
+                          </Button>
+                        </CardFooter>
+                      </Card>
+                    ))}
+                </div>
+              ) : (
+                <Card className="glass-effect">
+                  <CardContent className="flex flex-col items-center justify-center py-12">
+                    <div className="bg-primary/10 rounded-full p-4 mb-4">
+                      <MessageSquare className="h-8 w-8 text-primary" />
+                    </div>
+                    <h3 className="text-xl font-medium mb-2">No surveys yet</h3>
+                    <p className="text-muted-foreground text-center max-w-md mb-6">
+                      Create your first survey to collect targeted feedback from your customers.
+                    </p>
+                    <Button onClick={() => setShowNewSurveyDialog(true)}>
+                      <Plus className="mr-2 h-4 w-4" /> Create New Survey
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
           </Tabs>
         </div>
       </main>
       
       <Footer />
+
+      {/* New Survey Dialog */}
+      <Dialog open={showNewSurveyDialog} onOpenChange={setShowNewSurveyDialog}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create New Survey</DialogTitle>
+            <DialogDescription>
+              Design your custom survey with questions tailored to your specific needs.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            <div className="space-y-2">
+              <FormLabel htmlFor="title">Survey Title</FormLabel>
+              <Input
+                id="title"
+                placeholder="Enter survey title"
+                value={surveyTitle}
+                onChange={(e) => setSurveyTitle(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <FormLabel htmlFor="description">Survey Description (Optional)</FormLabel>
+              <Textarea
+                id="description"
+                placeholder="Enter a brief description about this survey"
+                value={surveyDescription}
+                onChange={(e) => setSurveyDescription(e.target.value)}
+                className="resize-none"
+              />
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <FormLabel>Questions</FormLabel>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleAddQuestion}
+                >
+                  <Plus className="h-4 w-4 mr-2" /> Add Question
+                </Button>
+              </div>
+
+              {surveyQuestions.map((q, index) => (
+                <div key={index} className="space-y-2 p-4 border rounded-lg relative">
+                  <div className="absolute top-2 right-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={surveyQuestions.length <= 1}
+                      onClick={() => handleRemoveQuestion(index)}
+                      className="h-8 w-8 p-0"
+                    >
+                      ×
+                    </Button>
+                  </div>
+                  <Question
+                    question={q.text}
+                    description={q.description}
+                    editable={true}
+                    onQuestionChange={(value) => handleQuestionChange(index, value)}
+                    onDescriptionChange={(value) => handleDescriptionChange(index, value)}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowNewSurveyDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateSurvey}>Create Survey</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Share Survey Dialog */}
+      <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Share Survey</DialogTitle>
+            <DialogDescription>
+              Copy the link below to share this survey with your customers.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex items-center gap-2 mt-4">
+            <Input value={currentSurveyShare} readOnly className="flex-1" />
+            <Button variant="outline" size="icon" onClick={copyToClipboard}>
+              {linkCopied ? (
+                <CheckCircle className="h-4 w-4 text-green-500" />
+              ) : (
+                <ClipboardCopy className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+          
+          <div className="mt-4 p-4 bg-muted rounded-md">
+            <p className="text-sm text-muted-foreground">
+              Share this link with your customers to collect their feedback. Responses will appear on your dashboard automatically.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
 export default BrandDashboard;
+
