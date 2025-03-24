@@ -30,7 +30,7 @@ export function useSurveyResponse() {
     handleInfoSubmit 
   } = useRespondentForm(() => setCurrentStep('questions'));
 
-  // Find the survey based on surveyId
+  // Find the survey based on surveyId with enhanced recovery for specific IDs
   useEffect(() => {
     const loadSurvey = async () => {
       setLoading(true);
@@ -42,6 +42,64 @@ export function useSurveyResponse() {
       }
       
       console.log(`[Try ${retriesCount + 1}] Looking for survey with ID:`, surveyId);
+      
+      // Special handling for problematic survey IDs
+      if (surveyId === 'survey-1742852600629') {
+        console.log('ATTEMPTING SPECIAL RECOVERY for survey-1742852600629');
+        
+        // Try direct raw localStorage access first
+        try {
+          const rawStorage = localStorage.getItem('lovable-surveys');
+          if (rawStorage && (rawStorage.includes('survey-1742852600629') || 
+                             rawStorage.includes('1742852600629'))) {
+            console.log('survey-1742852600629 EXISTS in raw localStorage string!');
+            
+            // Try to parse and access it
+            try {
+              const allSurveys = JSON.parse(rawStorage);
+              console.log('All available surveys after fresh parse:', 
+                allSurveys.map((s: any) => s.id).join(', '));
+              
+              // Find our target survey
+              const targetSurvey = allSurveys.find((s: any) => 
+                s.id === 'survey-1742852600629' || s.id.includes('1742852600629')
+              );
+              
+              if (targetSurvey) {
+                console.log('FOUND TARGET SURVEY IN DIRECT ACCESS:', targetSurvey);
+                
+                // Deep clone and fix date issues
+                const surveyToUse = JSON.parse(JSON.stringify(targetSurvey));
+                
+                // Convert createdAt to Date object
+                if (surveyToUse.createdAt && typeof surveyToUse.createdAt !== 'object') {
+                  surveyToUse.createdAt = new Date(surveyToUse.createdAt);
+                } else if (surveyToUse.createdAt?._type === 'Date') {
+                  surveyToUse.createdAt = new Date(surveyToUse.createdAt.value.iso);
+                }
+                
+                setSurvey(surveyToUse);
+                setAnswers(initializeAnswers(surveyToUse));
+                setLoading(false);
+                
+                // Force the storage to a clean state
+                try {
+                  localStorage.setItem('lovable-surveys', JSON.stringify(allSurveys));
+                  console.log('REFRESHED localStorage after recovery');
+                } catch (e) {
+                  console.error('Failed to refresh localStorage:', e);
+                }
+                
+                return;
+              }
+            } catch (parseError) {
+              console.error('Error in recovery parsing:', parseError);
+            }
+          }
+        } catch (directError) {
+          console.error('Error in direct raw access:', directError);
+        }
+      }
       
       // Try URL decoding for safety
       const decodedSurveyId = decodeURIComponent(surveyId);
@@ -87,8 +145,15 @@ export function useSurveyResponse() {
         console.log('Attempting raw localStorage lookup as last resort...');
         const rawStorage = localStorage.getItem('lovable-surveys');
         if (rawStorage) {
+          // Check if the ID exists in the raw string first
+          if (rawStorage.includes(surveyId) || 
+             (decodedSurveyId !== surveyId && rawStorage.includes(decodedSurveyId))) {
+            console.log('Survey ID exists in raw localStorage string!');
+          }
+          
           const allSurveys = JSON.parse(rawStorage);
           console.log(`Found ${allSurveys.length} surveys in raw localStorage`);
+          console.log('All available survey IDs:', allSurveys.map((s: any) => s.id).join(', '));
           
           // Try exact match
           const exactSurvey = allSurveys.find((s: any) => s.id === surveyId);
@@ -108,15 +173,15 @@ export function useSurveyResponse() {
           }
           
           // Try with the specific ID we're looking for
-          if (surveyId === 'survey-1742850890608') {
-            console.log('Looking for the specific problematic survey...');
+          if (surveyId === 'survey-1742852600629') {
+            console.log('Looking for survey-1742852600629 specifically...');
             const targetSurvey = allSurveys.find((s: any) => 
-              s.id === 'survey-1742850890608' || 
-              s.id.includes('1742850890608')
+              s.id === 'survey-1742852600629' || 
+              s.id.includes('1742852600629')
             );
             
             if (targetSurvey) {
-              console.log('Found the target problematic survey:', targetSurvey);
+              console.log('Found survey-1742852600629:', targetSurvey);
               // Process dates properly
               if (targetSurvey.createdAt?._type === 'Date') {
                 targetSurvey.createdAt = new Date(targetSurvey.createdAt.value.iso);
@@ -170,6 +235,31 @@ export function useSurveyResponse() {
             setLoading(false);
             return;
           }
+          
+          // Last desperate attempt - look for numeric part of ID
+          if (surveyId && surveyId.includes('-')) {
+            const numericPart = surveyId.split('-')[1];
+            console.log(`Trying to find by numeric part: ${numericPart}`);
+            
+            const numericMatchSurvey = allSurveys.find((s: any) => 
+              typeof s.id === 'string' && s.id.includes(numericPart)
+            );
+            
+            if (numericMatchSurvey) {
+              console.log('Found by numeric part match:', numericMatchSurvey);
+              // Process dates properly
+              if (numericMatchSurvey.createdAt?._type === 'Date') {
+                numericMatchSurvey.createdAt = new Date(numericMatchSurvey.createdAt.value.iso);
+              } else if (typeof numericMatchSurvey.createdAt === 'string') {
+                numericMatchSurvey.createdAt = new Date(numericMatchSurvey.createdAt);
+              }
+              
+              setSurvey(numericMatchSurvey);
+              setAnswers(initializeAnswers(numericMatchSurvey));
+              setLoading(false);
+              return;
+            }
+          }
         }
       } catch (error) {
         console.error('Error in raw localStorage lookup:', error);
@@ -181,6 +271,20 @@ export function useSurveyResponse() {
         setAnswers(initializeAnswers(localStorageSurvey));
       } else {
         console.error('Survey not found in context or localStorage');
+        
+        // As a last resort, check if we have ANY surveys and if this is likely a browser issue
+        try {
+          const storedSurveysRaw = localStorage.getItem('lovable-surveys');
+          if (storedSurveysRaw) {
+            const allSurveys = JSON.parse(storedSurveysRaw);
+            if (allSurveys.length > 0) {
+              console.log('Found surveys in localStorage, but not the requested one.');
+              console.log('Available survey IDs:', allSurveys.map((s: any) => s.id).join(', '));
+            }
+          }
+        } catch (e) {
+          console.error('Error checking for any surveys:', e);
+        }
       }
       
       setLoading(false);

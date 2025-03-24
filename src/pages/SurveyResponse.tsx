@@ -41,14 +41,40 @@ const SurveyResponse = () => {
       const storedSurveysRaw = localStorage.getItem('lovable-surveys');
       if (storedSurveysRaw) {
         const storedSurveys = JSON.parse(storedSurveysRaw);
+        console.log('All available surveys in localStorage:', storedSurveys.map((s: any) => s.id).join(', '));
+        
         const exactMatch = storedSurveys.some((s: any) => s.id === surveyId);
         console.log(`Manual check - Survey ID exact match in localStorage: ${exactMatch}`);
+        
+        // If current ID is the problematic one, try harder
+        if (surveyId === 'survey-1742852600629' || surveyId?.includes('1742852600629')) {
+          console.log('ATTEMPTING SPECIAL RECOVERY for survey-1742852600629');
+          // Look for this specific ID
+          const targetSurvey = storedSurveys.find((s: any) => 
+            s.id === 'survey-1742852600629' || s.id.includes('1742852600629')
+          );
+          
+          if (targetSurvey) {
+            console.log('FOUND TARGET SURVEY:', targetSurvey);
+            
+            // Force the update of localStorage to ensure it's properly formatted
+            try {
+              let updatedSurveys = [...storedSurveys];
+              localStorage.setItem('lovable-surveys', JSON.stringify(updatedSurveys));
+              console.log('REFRESHED localStorage');
+            } catch (e) {
+              console.error('Failed to refresh localStorage:', e);
+            }
+          }
+        }
         
         if (exactMatch && !survey && !loading) {
           console.log('CRITICAL: Survey found in localStorage but not loaded in component state');
           // Force a retry after a short delay if we detect this condition
           setTimeout(handleRetry, 500);
         }
+      } else {
+        console.error('NO SURVEYS found in localStorage');
       }
     } catch (error) {
       console.error('Error in manual localStorage check:', error);

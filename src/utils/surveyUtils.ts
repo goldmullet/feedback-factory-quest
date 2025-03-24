@@ -27,17 +27,35 @@ export const findSurveyById = (
     console.log(`Survey ID was URL encoded. Decoded from "${surveyId}" to "${decodedSurveyId}"`);
   }
   
-  // For the specific problematic survey ID
-  if (surveyId === 'survey-1742850890608' || decodedSurveyId === 'survey-1742850890608') {
-    console.log('Looking for the specific problematic survey...');
+  // Special handling for specific problematic surveys
+  if (surveyId === 'survey-1742850890608' || decodedSurveyId === 'survey-1742850890608' ||
+      surveyId === 'survey-1742852600629' || decodedSurveyId === 'survey-1742852600629') {
+    console.log('Looking for problematic survey...');
+    
+    // First, try with the exact ID
     const targetSurvey = surveys.find(s => 
-      s.id === 'survey-1742850890608' || 
-      s.id.includes('1742850890608')
+      s.id === surveyId || (isEncoded && s.id === decodedSurveyId)
     );
     
     if (targetSurvey) {
-      console.log('Found the target problematic survey in context:', targetSurvey);
+      console.log('Found problematic survey with exact ID in context:', targetSurvey);
       return targetSurvey;
+    }
+    
+    // Next, try with partial matching
+    const partialMatchSurvey = surveys.find(s => 
+      typeof s.id === 'string' && (
+        s.id.includes(surveyId) || 
+        surveyId.includes(s.id) ||
+        (isEncoded && (s.id.includes(decodedSurveyId) || decodedSurveyId.includes(s.id))) ||
+        (surveyId === 'survey-1742850890608' && s.id.includes('1742850890608')) ||
+        (surveyId === 'survey-1742852600629' && s.id.includes('1742852600629'))
+      )
+    );
+    
+    if (partialMatchSurvey) {
+      console.log('Found problematic survey with partial match in context:', partialMatchSurvey);
+      return partialMatchSurvey;
     }
   }
   
@@ -101,6 +119,47 @@ export const findSurveyInLocalStorage = (
       console.log('Raw stored surveys from localStorage:', storedSurveysRaw);
       setDirectLocalStorageCheck(true);
       
+      // Special handling for problematic survey IDs - direct from raw storage
+      if (surveyId === 'survey-1742852600629' || decodedSurveyId === 'survey-1742852600629') {
+        console.log('CHECKING RAW STORAGE for survey-1742852600629');
+        
+        if (storedSurveysRaw.includes('survey-1742852600629') || 
+            storedSurveysRaw.includes('1742852600629')) {
+          console.log('Found survey-1742852600629 in raw localStorage string!');
+          
+          // Parse the entire raw storage to extract this survey
+          try {
+            // Re-parse to ensure we're using the latest data
+            const freshStoredSurveys = JSON.parse(storedSurveysRaw);
+            console.log('Available survey IDs after fresh parse:', 
+              freshStoredSurveys.map((s: any) => s.id).join(', '));
+            
+            // Try to find the exact match
+            const targetSurvey = freshStoredSurveys.find((s: any) => 
+              s.id === 'survey-1742852600629' || s.id.includes('1742852600629')
+            );
+            
+            if (targetSurvey) {
+              console.log('FOUND EXACT TARGET in fresh parse:', targetSurvey);
+              
+              // Deep clone and fix any date serialization issues
+              const surveyToUse = JSON.parse(JSON.stringify(targetSurvey));
+              
+              // Convert createdAt to Date object
+              if (surveyToUse.createdAt && typeof surveyToUse.createdAt !== 'object') {
+                surveyToUse.createdAt = new Date(surveyToUse.createdAt);
+              } else if (surveyToUse.createdAt?._type === 'Date') {
+                surveyToUse.createdAt = new Date(surveyToUse.createdAt.value.iso);
+              }
+              
+              return surveyToUse as Survey;
+            }
+          } catch (parseError) {
+            console.error('Error parsing raw storage for target survey:', parseError);
+          }
+        }
+      }
+      
       // Parse the stored surveys
       let storedSurveys;
       try {
@@ -108,12 +167,19 @@ export const findSurveyInLocalStorage = (
         console.log('Number of surveys in localStorage:', storedSurveys.length);
         console.log('Available survey IDs:', storedSurveys.map((s: any) => s.id).join(', '));
         
-        // First, check for the specific problematic survey ID
-        if (surveyId === 'survey-1742850890608' || decodedSurveyId === 'survey-1742850890608') {
+        // Special handling for specific problematic surveys
+        if (surveyId === 'survey-1742850890608' || decodedSurveyId === 'survey-1742850890608' ||
+            surveyId === 'survey-1742852600629' || decodedSurveyId === 'survey-1742852600629') {
           console.log('Looking for the specific problematic survey in localStorage...');
+          
+          // Extract surveyId number without prefix
+          const numericId = surveyId.includes('survey-') ? 
+            surveyId.replace('survey-', '') : surveyId;
+          
           const targetSurvey = storedSurveys.find((s: any) => 
-            s.id === 'survey-1742850890608' || 
-            s.id.includes('1742850890608')
+            s.id === surveyId || 
+            s.id.includes(numericId) ||
+            (isEncoded && (s.id === decodedSurveyId || s.id.includes(decodedSurveyId)))
           );
           
           if (targetSurvey) {
