@@ -63,7 +63,11 @@ export function useSurveyResponse() {
         console.log('Using AI processed answers:', !!processedAnswers);
         
         // Use processed answers if available, otherwise use regular answers
-        const answersToSubmit = processedAnswers || answers;
+        const answersToSubmit = processedAnswers || answers.map(answer => ({
+          ...answer,
+          transcription: undefined,
+          insights: undefined
+        }));
         
         addSurveyResponse(survey.id, answersToSubmit, respondentInfo, audioBlobs);
         

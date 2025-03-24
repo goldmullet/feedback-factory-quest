@@ -94,7 +94,6 @@ export const FeedbackProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     try {
       localStorage.setItem('lovable-surveys', JSON.stringify(surveys, jsonReplacer));
-      // Log for debugging
       console.log('Saved surveys to localStorage:', surveys);
     } catch (error) {
       console.error('Error saving surveys to localStorage:', error);
@@ -105,10 +104,54 @@ export const FeedbackProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     try {
       localStorage.setItem('lovable-survey-responses', JSON.stringify(surveyResponses, jsonReplacer));
+      console.log('Saved survey responses to localStorage:', surveyResponses);
     } catch (error) {
       console.error('Error saving survey responses to localStorage:', error);
     }
   }, [surveyResponses]);
+
+  // Add a debug survey response if none exist (for development purposes)
+  useEffect(() => {
+    if (surveyResponses.length === 0 && surveys.length > 0) {
+      console.log('No survey responses found, creating a sample response for debugging');
+      
+      // Find the first survey to add a sample response to
+      const firstSurvey = surveys[0];
+      if (firstSurvey) {
+        const sampleResponse: SurveyResponse = {
+          id: `response-debug-${Date.now()}`,
+          surveyId: firstSurvey.id,
+          answers: firstSurvey.questions.map(q => ({
+            questionId: q.id,
+            answer: 'Sample response text',
+            transcription: 'This is a sample transcription from the AI system.',
+            insights: ['Quality concern', 'Price too high', 'Better alternatives available']
+          })),
+          respondent: {
+            name: 'Sample User',
+            email: 'sample@example.com'
+          },
+          transcriptions: {},
+          insights: {},
+          createdAt: new Date()
+        };
+        
+        // Add sample transcriptions and insights
+        firstSurvey.questions.forEach(q => {
+          if (sampleResponse.transcriptions) {
+            sampleResponse.transcriptions[q.id] = 'This is a sample transcription from the AI system.';
+          }
+          
+          if (sampleResponse.insights) {
+            sampleResponse.insights[q.id] = ['Quality concern', 'Price too high', 'Better alternatives available'];
+          }
+        });
+        
+        setSurveyResponses(prev => [...prev, sampleResponse]);
+        console.log('Added sample survey response:', sampleResponse);
+      }
+    }
+  }, [surveys, surveyResponses]);
 
   const addBrand = (name: string) => {
     const newBrand = createBrand(name);
@@ -139,7 +182,6 @@ export const FeedbackProvider = ({ children }: { children: ReactNode }) => {
     const newSurvey = createSurvey(brandId, title, description, questionsList);
     setSurveys(prev => [...prev, newSurvey]);
     
-    // Log for debugging
     console.log('Created new survey:', newSurvey);
     
     return newSurvey.id;
@@ -147,11 +189,12 @@ export const FeedbackProvider = ({ children }: { children: ReactNode }) => {
 
   const addSurveyResponse = (
     surveyId: string, 
-    answers: {questionId: string, answer: string}[], 
+    answers: {questionId: string, answer: string, transcription?: string, insights?: string[]}[], 
     respondent?: {name: string, email: string},
     audioBlobs?: {[key: string]: Blob}
   ) => {
     const newResponse = createSurveyResponse(surveyId, answers, respondent, audioBlobs);
+    console.log('Creating new survey response:', newResponse);
     setSurveyResponses(prev => [...prev, newResponse]);
     
     if (respondent && respondent.email) {

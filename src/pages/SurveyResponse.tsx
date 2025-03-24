@@ -187,7 +187,12 @@ const SurveyResponse = () => {
     
     try {
       // Process each audio blob to get transcriptions and insights
-      const processedAnswers = [...answers];
+      const processedAnswers = [...answers].map(answer => ({
+        questionId: answer.questionId,
+        answer: answer.answer,
+        transcription: undefined,
+        insights: undefined
+      }));
       
       // Process audio files in parallel
       const audioProcessingPromises = Object.entries(globalAudioBlobs).map(async ([questionId, blob]) => {

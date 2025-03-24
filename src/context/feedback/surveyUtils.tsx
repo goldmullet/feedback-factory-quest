@@ -29,8 +29,12 @@ export const createSurveyResponse = (
   respondent?: {name: string, email: string},
   audioBlobs?: {[key: string]: Blob}
 ): SurveyResponse => {
+  const responseId = `response-${Date.now()}`;
+  console.log(`Creating survey response with ID ${responseId} for survey ${surveyId}`);
+  console.log('Answers:', answers);
+  
   const response: SurveyResponse = {
-    id: `response-${Date.now()}`,
+    id: responseId,
     surveyId,
     answers,
     createdAt: new Date()
@@ -60,7 +64,7 @@ export const createSurveyResponse = (
       transcriptions[answer.questionId] = answer.transcription;
     }
     
-    if (answer.insights) {
+    if (answer.insights && answer.insights.length > 0) {
       insights[answer.questionId] = answer.insights;
     }
   });
