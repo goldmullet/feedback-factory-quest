@@ -8,7 +8,7 @@ import SurveyNotFound from '@/components/survey/SurveyNotFound';
 import SurveyLoading from '@/components/survey/SurveyLoading';
 import SurveyResponseLayout from '@/components/survey/SurveyResponseLayout';
 import { useParams } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 const SurveyResponse = () => {
@@ -20,6 +20,8 @@ const SurveyResponse = () => {
     currentStep,
     answers,
     formErrors,
+    respondentInfo,
+    setRespondentInfo,
     directLocalStorageCheck,
     setCurrentStep,
     handleInfoSubmit,
@@ -28,12 +30,6 @@ const SurveyResponse = () => {
     handleRetry,
     handleNavigateHome
   } = useSurveyResponse();
-  
-  // Local state for respondent info 
-  const [respondentInfo, setRespondentInfo] = useState({
-    name: '',
-    email: ''
-  });
   
   // Debug output on mount and when survey status changes
   useEffect(() => {
@@ -63,13 +59,6 @@ const SurveyResponse = () => {
     />;
   }
 
-  const onInfoSubmit = (info: {name: string, email: string}, errors: {[key: string]: string}) => {
-    const validInfo = handleInfoSubmit(info, errors);
-    if (validInfo) {
-      setRespondentInfo(validInfo);
-    }
-  };
-
   return (
     <SurveyResponseLayout>
       {currentStep === 'intro' && (
@@ -84,7 +73,7 @@ const SurveyResponse = () => {
           respondentInfo={respondentInfo}
           setRespondentInfo={setRespondentInfo}
           formErrors={formErrors}
-          onSubmit={onInfoSubmit}
+          onSubmit={handleInfoSubmit}
         />
       )}
 
