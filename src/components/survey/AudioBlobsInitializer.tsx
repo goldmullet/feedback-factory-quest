@@ -1,5 +1,6 @@
 
 import { useEffect } from 'react';
+import { debugLog } from '@/utils/debugUtils';
 
 // Add audioBlobs to the global Window interface
 declare global {
@@ -16,6 +17,20 @@ const AudioBlobsInitializer = () => {
   useEffect(() => {
     // Initialize global audioBlobs
     window.audioBlobs = {};
+    debugLog('AudioBlobsInitializer: Initialized global audioBlobs');
+    
+    // Clean up function
+    return () => {
+      // Optionally clear audioBlobs on unmount
+      // This could prevent memory leaks from large blobs
+      if (window.audioBlobs) {
+        const count = Object.keys(window.audioBlobs).length;
+        if (count > 0) {
+          debugLog(`AudioBlobsInitializer: Cleaning up ${count} audio blobs`);
+        }
+        window.audioBlobs = {};
+      }
+    };
   }, []);
   
   return null; // This component doesn't render anything
