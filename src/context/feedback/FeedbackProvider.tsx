@@ -34,6 +34,7 @@ export const FeedbackProvider = ({ children }: { children: ReactNode }) => {
   const [feedback, setFeedback] = useState<Feedback[]>([]);
   const [currentBrandId, setCurrentBrandId] = useState<string>('brand-1');
 
+  // Use a custom serializer for surveys to handle Date objects properly
   const [surveys, setSurveys] = useState<Survey[]>(() => {
     const storedSurveys = localStorage.getItem('lovable-surveys');
     if (storedSurveys) {
@@ -73,6 +74,8 @@ export const FeedbackProvider = ({ children }: { children: ReactNode }) => {
   // Save surveys to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem('lovable-surveys', JSON.stringify(surveys));
+    // Log for debugging
+    console.log('Saved surveys to localStorage:', surveys);
   }, [surveys]);
 
   // Save survey responses to localStorage whenever they change
@@ -108,6 +111,10 @@ export const FeedbackProvider = ({ children }: { children: ReactNode }) => {
   const addSurvey = (brandId: string, title: string, description: string, questionsList: {text: string, description: string}[]) => {
     const newSurvey = createSurvey(brandId, title, description, questionsList);
     setSurveys(prev => [...prev, newSurvey]);
+    
+    // Log for debugging
+    console.log('Created new survey:', newSurvey);
+    
     return newSurvey.id;
   };
 

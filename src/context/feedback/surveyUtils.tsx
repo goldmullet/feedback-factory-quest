@@ -15,6 +15,7 @@ export const createSurvey = (
   description: string, 
   questionsList: {text: string, description: string}[]
 ): Survey => {
+  // Create a simpler, more reliable ID format
   const surveyId = `survey-${Date.now()}`;
   
   const surveyQuestions = questionsList.map(q => createSurveyQuestion(q.text, q.description));

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useFeedback } from '@/context/feedback';
@@ -26,11 +27,11 @@ const SurveyResponse = () => {
   const [answers, setAnswers] = useState<{questionId: string, answer: string}[]>([]);
   const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
 
-  // Find the survey based on surveyId
+  // Find the survey based on surveyId with improved logging
   useEffect(() => {
     if (surveyId) {
       console.log('Looking for survey with ID:', surveyId);
-      console.log('Available surveys:', surveys);
+      console.log('Available surveys:', JSON.stringify(surveys, null, 2));
       
       const foundSurvey = surveys.find(s => s.id === surveyId);
       
@@ -46,6 +47,8 @@ const SurveyResponse = () => {
         );
       } else {
         console.error('Survey not found with ID:', surveyId);
+        // Add more debug information
+        console.log('Survey IDs in system:', surveys.map(s => s.id));
       }
       
       setLoading(false);
