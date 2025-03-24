@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { useFeedback } from '@/context/FeedbackContext';
+import { useFeedback } from '@/context/feedback';
 import { toast } from '@/components/ui/use-toast';
 import { Plus, ArrowRight, Trash2, HelpCircle } from 'lucide-react';
 

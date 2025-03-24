@@ -5,7 +5,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import Question from '@/components/Question';
 import AudioRecorder from '@/components/AudioRecorder';
-import { useFeedback } from '@/context/FeedbackContext';
+import { useFeedback } from '@/context/feedback';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/components/ui/use-toast';

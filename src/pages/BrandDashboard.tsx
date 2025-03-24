@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useFeedback } from '@/context/FeedbackContext';
+import { useFeedback } from '@/context/feedback';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import StatsCards from '@/components/dashboard/StatsCards';
