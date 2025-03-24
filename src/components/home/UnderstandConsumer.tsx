@@ -3,7 +3,11 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { ShoppingBag, Users, ShoppingCart, MessageCircle, ArrowRight } from 'lucide-react';
 
-const UnderstandConsumer = () => {
+interface UnderstandConsumerProps {
+  forwardedRef?: React.RefObject<HTMLDivElement>;
+}
+
+const UnderstandConsumer = ({ forwardedRef }: UnderstandConsumerProps) => {
   const consumerBuckets = [
     {
       icon: <ShoppingBag className="h-10 w-10" />,
@@ -32,7 +36,7 @@ const UnderstandConsumer = () => {
   ];
 
   return (
-    <section className="py-24 bg-white dark:bg-slate-800">
+    <section className="py-24 bg-white dark:bg-slate-800" ref={forwardedRef}>
       <div className="container-custom">
         <motion.div 
           className="text-center mb-16"
