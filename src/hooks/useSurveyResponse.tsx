@@ -29,9 +29,11 @@ export function useSurveyResponse() {
     handleInfoSubmit 
   } = useRespondentForm(() => setCurrentStep('questions'));
 
-  // New method to force recovery of a specific survey
-  const forceSurveyRecovery = useCallback((specificSurveyId: string) => {
-    console.log(`Force recovery for survey: ${specificSurveyId}`);
+  // New method to force recovery of a specific survey, with silent option
+  const forceSurveyRecovery = useCallback((specificSurveyId: string, silent: boolean = false) => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Force recovery for survey: ${specificSurveyId}, silent: ${silent}`);
+    }
     
     try {
       // Attempt direct raw localStorage access
@@ -39,13 +41,17 @@ export function useSurveyResponse() {
       if (rawStorage) {
         // Check if the ID exists in the raw string
         if (rawStorage.includes(specificSurveyId)) {
-          console.log(`${specificSurveyId} EXISTS in raw localStorage string!`);
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`${specificSurveyId} EXISTS in raw localStorage string!`);
+          }
           
           try {
             // Parse all surveys
             const allSurveys = JSON.parse(rawStorage);
-            console.log('All available surveys after force parse:', 
-              allSurveys.map((s: any) => s.id).join(', '));
+            if (process.env.NODE_ENV === 'development') {
+              console.log('All available surveys after force parse:', 
+                allSurveys.map((s: any) => s.id).join(', '));
+            }
             
             // Find the target survey
             const targetSurvey = allSurveys.find((s: any) => 
@@ -54,7 +60,9 @@ export function useSurveyResponse() {
             );
             
             if (targetSurvey) {
-              console.log('FOUND TARGET SURVEY IN FORCE RECOVERY:', targetSurvey);
+              if (process.env.NODE_ENV === 'development') {
+                console.log('FOUND TARGET SURVEY IN FORCE RECOVERY:', targetSurvey);
+              }
               
               // Deep clone and fix date issues
               const surveyToUse = JSON.parse(JSON.stringify(targetSurvey));
@@ -64,6 +72,10 @@ export function useSurveyResponse() {
                 surveyToUse.createdAt = new Date(surveyToUse.createdAt);
               } else if (surveyToUse.createdAt?._type === 'Date') {
                 surveyToUse.createdAt = new Date(surveyToUse.createdAt.value.iso);
+              } else if (surveyToUse.createdAt === undefined && surveyToUse.createdAt) {
+                // Handle typo in key name (createdAt vs createdAt)
+                surveyToUse.createdAt = new Date(surveyToUse.createdAt);
+                delete surveyToUse.createdAt;
               }
               
               setSurvey(surveyToUse);
@@ -72,13 +84,17 @@ export function useSurveyResponse() {
               
               // Force a clean state for localStorage
               localStorage.setItem('lovable-surveys', JSON.stringify(allSurveys));
-              console.log('REFRESHED localStorage after force recovery');
+              if (process.env.NODE_ENV === 'development') {
+                console.log('REFRESHED localStorage after force recovery');
+              }
               
-              // Show a success toast
-              toast({
-                title: "Survey Recovered",
-                description: `Successfully recovered "${surveyToUse.title}"`,
-              });
+              // Only show a success toast if not in silent mode
+              if (!silent) {
+                toast({
+                  title: "Survey Loaded",
+                  description: `Successfully loaded "${surveyToUse.title}"`,
+                });
+              }
               
               return true;
             }
@@ -95,7 +111,9 @@ export function useSurveyResponse() {
       );
       
       if (matchingSurvey) {
-        console.log('FOUND TARGET SURVEY IN CONTEXT:', matchingSurvey);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('FOUND TARGET SURVEY IN CONTEXT:', matchingSurvey);
+        }
         setSurvey(matchingSurvey);
         setAnswers(initializeAnswers(matchingSurvey));
         setLoading(false);
@@ -120,7 +138,9 @@ export function useSurveyResponse() {
         return;
       }
       
-      console.log(`[Try ${retriesCount + 1}] Looking for survey with ID:`, surveyId);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[Try ${retriesCount + 1}] Looking for survey with ID:`, surveyId);
+      }
       
       // Special handling for problematic survey IDs - updated to include the latest problematic ID
       const problematicSurveyIds = [
@@ -134,12 +154,16 @@ export function useSurveyResponse() {
         surveyId === id || surveyId.includes(id.replace('survey-', ''))
       );
       
-      // For the specific new problem survey, try force recovery first
+      // For the specific new problem survey, try force recovery first - with silent flag
       if (surveyId === 'survey-1742853415451') {
-        console.log('Attempt immediate force recovery for survey-1742853415451');
-        const recovered = forceSurveyRecovery('survey-1742853415451');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Attempt immediate silent force recovery for survey-1742853415451');
+        }
+        const recovered = forceSurveyRecovery('survey-1742853415451', true);
         if (recovered) {
-          console.log('Early recovery successful for survey-1742853415451');
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Early silent recovery successful for survey-1742853415451');
+          }
           return;
         }
       }
@@ -211,7 +235,9 @@ export function useSurveyResponse() {
       // Try URL decoding for safety
       const decodedSurveyId = decodeURIComponent(surveyId);
       if (decodedSurveyId !== surveyId) {
-        console.log(`Survey ID was URL encoded. Decoded: ${decodedSurveyId}`);
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`Survey ID was URL encoded. Decoded: ${decodedSurveyId}`);
+        }
       }
       
       // First try to find in context surveys
@@ -219,12 +245,16 @@ export function useSurveyResponse() {
       
       // If not found with original ID, try with decoded ID
       if (!foundSurvey && decodedSurveyId !== surveyId) {
-        console.log(`Trying with decoded ID: ${decodedSurveyId}`);
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`Trying with decoded ID: ${decodedSurveyId}`);
+        }
         foundSurvey = findSurveyById(decodedSurveyId, surveys, setDirectLocalStorageCheck);
       }
       
       if (foundSurvey) {
-        console.log('Found survey in context:', foundSurvey);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Found survey in context:', foundSurvey);
+        }
         setSurvey(foundSurvey);
         setAnswers(initializeAnswers(foundSurvey));
         setLoading(false);
@@ -282,10 +312,14 @@ export function useSurveyResponse() {
       
       // If local storage lookup fails, try with the decoded ID
       if (!localStorageSurvey && decodedSurveyId !== surveyId) {
-        console.log(`Direct localStorage lookup failed, trying with decoded ID: ${decodedSurveyId}`);
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`Direct localStorage lookup failed, trying with decoded ID: ${decodedSurveyId}`);
+        }
         const decodedLocalStorageSurvey = findSurveyInLocalStorage(decodedSurveyId, setDirectLocalStorageCheck);
         if (decodedLocalStorageSurvey) {
-          console.log('Found survey in localStorage with decoded ID:', decodedLocalStorageSurvey);
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Found survey in localStorage with decoded ID:', decodedLocalStorageSurvey);
+          }
           setSurvey(decodedLocalStorageSurvey);
           setAnswers(initializeAnswers(decodedLocalStorageSurvey));
           setLoading(false);
@@ -294,7 +328,9 @@ export function useSurveyResponse() {
       }
       
       if (localStorageSurvey) {
-        console.log('Found survey in localStorage:', localStorageSurvey);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Found survey in localStorage:', localStorageSurvey);
+        }
         setSurvey(localStorageSurvey);
         setAnswers(initializeAnswers(localStorageSurvey));
         setLoading(false);
@@ -355,7 +391,9 @@ export function useSurveyResponse() {
         console.error('Error in final attempt to find survey:', e);
       }
       
-      console.error('Survey not found by any method:', surveyId);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Survey not found by any method:', surveyId);
+      }
       setLoading(false);
     };
 
@@ -406,10 +444,14 @@ export function useSurveyResponse() {
   const handleRetry = useCallback(() => {
     setLoading(true);
     setRetriesCount(prev => prev + 1);
-    toast({
-      title: "Retrying",
-      description: "Attempting to load the survey again...",
-    });
+    
+    // Only show retry toast in development mode
+    if (process.env.NODE_ENV === 'development') {
+      toast({
+        title: "Retrying",
+        description: "Attempting to load the survey again...",
+      });
+    }
     
     // Force a refresh of the localStorage data
     try {
@@ -417,7 +459,9 @@ export function useSurveyResponse() {
       if (storedSurveysRaw) {
         const storedSurveys = JSON.parse(storedSurveysRaw);
         localStorage.setItem('lovable-surveys', JSON.stringify(storedSurveys));
-        console.log('Refreshed localStorage on retry');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Refreshed localStorage on retry');
+        }
       }
     } catch (error) {
       console.error('Error refreshing localStorage on retry:', error);

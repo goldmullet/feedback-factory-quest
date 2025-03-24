@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,43 +9,44 @@ interface SurveyNotFoundProps {
   surveyId?: string;
   onRetry?: () => void;
   directLocalStorageCheck?: boolean;
+  silentMode?: boolean;
 }
 
 const SurveyNotFound = ({ 
   onNavigateHome, 
   surveyId, 
   onRetry, 
-  directLocalStorageCheck = false 
+  directLocalStorageCheck = false,
+  silentMode = false
 }: SurveyNotFoundProps) => {
-  const [showDebugInfo, setShowDebugInfo] = useState(true);
+  const [showDebugInfo, setShowDebugInfo] = useState(!silentMode);
   const [isRepairing, setIsRepairing] = useState(false);
   const [lastSurveyId, setLastSurveyId] = useState<string | undefined>(surveyId);
   const [rawStorageData, setRawStorageData] = useState<string | null>(null);
   const { toast } = useToast();
   
-  // Reset repair state if surveyId changes
   useEffect(() => {
     if (surveyId !== lastSurveyId) {
       setIsRepairing(false);
       setLastSurveyId(surveyId);
     }
     
-    // Also check and store raw localStorage content
     try {
       const rawData = localStorage.getItem('lovable-surveys');
       setRawStorageData(rawData);
       
-      if (rawData) {
-        console.log('Raw localStorage contains data of length:', rawData.length);
-      } else {
-        console.log('No raw data found in localStorage');
+      if (process.env.NODE_ENV === 'development') {
+        if (rawData) {
+          console.log('Raw localStorage contains data of length:', rawData.length);
+        } else {
+          console.log('No raw data found in localStorage');
+        }
       }
     } catch (e) {
       console.error('Error accessing raw localStorage:', e);
     }
   }, [surveyId, lastSurveyId]);
   
-  // Try to fetch stored surveys directly
   const getStoredSurveys = () => {
     try {
       const storedSurveysRaw = localStorage.getItem('lovable-surveys');
@@ -61,7 +61,6 @@ const SurveyNotFound = ({
   
   const storedSurveys = getStoredSurveys();
   
-  // More thorough survey existence checks
   const exactMatch = surveyId && storedSurveys.some((s: any) => s.id === surveyId);
   const decodedMatch = surveyId && surveyId !== decodeURIComponent(surveyId) && 
     storedSurveys.some((s: any) => s.id === decodeURIComponent(surveyId));
@@ -73,14 +72,12 @@ const SurveyNotFound = ({
   );
   const numericMatch = surveyId && surveyId.includes('-') && 
     storedSurveys.some((s: any) => s.id.includes(surveyId.split('-')[1]));
-    
+  
   const surveyExists = exactMatch || decodedMatch || caseInsensitiveMatch || partialMatch || numericMatch;
   
-  // Check for raw existence
   const rawStorageHasId = surveyId ? 
     localStorage.getItem('lovable-surveys')?.includes(surveyId) || false : false;
   
-  // Special check - is this one of our known problematic IDs?
   const problematicSurveyIds = [
     'survey-1742852600629', 
     'survey-1742852947140', 
@@ -92,7 +89,6 @@ const SurveyNotFound = ({
     problematicSurveyIds.some(id => surveyId === id || surveyId.includes(id.replace('survey-', '')))
     : false;
   
-  // Create an empty survey template in case we need one
   const createEmptySurveyTemplate = () => {
     if (!surveyId) return null;
     
@@ -112,21 +108,19 @@ const SurveyNotFound = ({
     };
   };
   
-  // Display a toast with survey info when component mounts
   useEffect(() => {
-    if (surveyId) {
-      // Check if surveyId has URL encoded characters and decode them
+    if (surveyId && !silentMode) {
       const decodedSurveyId = decodeURIComponent(surveyId);
       const isEncoded = decodedSurveyId !== surveyId;
       
-      if (isEncoded) {
+      if (process.env.NODE_ENV === 'development' && isEncoded) {
         console.log(`Survey ID was URL encoded. Decoded from "${surveyId}" to "${decodedSurveyId}"`);
       }
       
-      // Specific handling for the new problematic ID
       if (surveyId === 'survey-1742853415451') {
-        console.log('Detected problematic survey-1742853415451, starting aggressive recovery');
-        // Automatically trigger a repair
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Detected problematic survey-1742853415451, starting aggressive recovery');
+        }
         setTimeout(() => repairAndRetry(), 500);
       }
       
@@ -138,14 +132,12 @@ const SurveyNotFound = ({
         variant: "destructive"
       });
       
-      // Force a check to see if any surveys exist at all
       if (storedSurveys.length > 0) {
         console.log(`Found ${storedSurveys.length} surveys in localStorage`);
         console.log('Available survey IDs:', storedSurveys.map((s: any) => s.id).join(', '));
       } else {
         console.error('No surveys found in localStorage at all');
         
-        // Check if raw storage has any data
         if (rawStorageData && rawStorageData.length > 0) {
           console.log('Raw storage has data but parsing failed. Length:', rawStorageData.length);
           if (rawStorageData.includes('"id"')) {
@@ -154,7 +146,6 @@ const SurveyNotFound = ({
         }
       }
       
-      // Special check for problematic IDs
       if (isProblematicId) {
         console.log(`Checking specifically for ${surveyId}`);
         const rawStorage = localStorage.getItem('lovable-surveys');
@@ -163,27 +154,27 @@ const SurveyNotFound = ({
           if (rawStorage.includes(surveyId) || rawStorage.includes(numericPart)) {
             console.log(`Found ${surveyId} in raw localStorage string!`);
             
-            // Auto-trigger repair for problematic IDs
             setTimeout(() => repairAndRetry(), 500);
           }
         }
       }
     }
-  }, [surveyId, surveyExists, toast, storedSurveys.length, isProblematicId, rawStorageData]);
+    
+    if (silentMode && surveyId) {
+      setTimeout(() => repairAndRetry(undefined, true), 300);
+    }
+  }, [surveyId, surveyExists, toast, storedSurveys.length, isProblematicId, rawStorageData, silentMode]);
   
   const handleCheckForExactSurvey = () => {
     if (!surveyId) return;
     
-    // Try decode the survey ID if it's URL encoded
     const decodedSurveyId = decodeURIComponent(surveyId);
     
-    // Just to double-check, directly try to find the survey in localStorage
     try {
       const storedSurveysRaw = localStorage.getItem('lovable-surveys');
       if (storedSurveysRaw) {
         console.log('Raw localStorage content:', storedSurveysRaw);
         
-        // Check if ID exists in raw string
         const rawContains = storedSurveysRaw.includes(surveyId);
         console.log(`Raw localStorage string contains survey ID: ${rawContains}`);
         
@@ -196,10 +187,8 @@ const SurveyNotFound = ({
         
         const parsedSurveys = JSON.parse(storedSurveysRaw);
         
-        // Log all survey IDs
         console.log('All survey IDs in localStorage:', parsedSurveys.map((s: any) => s.id));
         
-        // Find different match types
         const exactSurvey = parsedSurveys.find((s: any) => s.id === surveyId);
         const decodedMatch = decodedSurveyId !== surveyId ? 
           parsedSurveys.find((s: any) => s.id === decodedSurveyId) : null;
@@ -210,7 +199,6 @@ const SurveyNotFound = ({
           typeof s.id === 'string' && (s.id.includes(surveyId) || surveyId.includes(s.id))
         );
         
-        // Check for numeric part match
         let numericMatchSurvey = null;
         if (surveyId && surveyId.includes('-')) {
           const numericPart = surveyId.split('-')[1];
@@ -226,7 +214,6 @@ const SurveyNotFound = ({
             description: "The survey exists in localStorage with an exact ID match.",
           });
           
-          // Try to repair anyway
           repairAndRetry(parsedSurveys);
         } else if (decodedMatch) {
           console.log('Found URL-decoded match survey:', decodedMatch);
@@ -263,94 +250,88 @@ const SurveyNotFound = ({
         } else {
           console.log('Survey not found in localStorage, even on manual check');
           
-          // Final attempt - try repairing localStorage
           repairAndRetry(parsedSurveys);
         }
       } else {
-        // If no surveys in localStorage, check if we should create a new one
         console.log('No surveys found in localStorage at all');
         
-        // Force a repair attempt anyway
         repairForcefully();
       }
     } catch (error) {
       console.error('Error during manual survey check:', error);
-      // Try forced repair as a last resort
       repairForcefully();
     }
   };
   
-  // Enhanced repair function
-  const repairAndRetry = (surveys: any[] = []) => {
+  const repairAndRetry = (surveys: any[] = [], silent: boolean = silentMode) => {
     setIsRepairing(true);
     
     try {
-      // If no surveys were passed, try to get them
       const surveysToUse = surveys.length > 0 ? surveys : getStoredSurveys();
       
       if (surveysToUse.length > 0) {
-        // 1. Deep clone all surveys to ensure clean objects
         const cleanSurveys = JSON.parse(JSON.stringify(surveysToUse));
         
-        // 2. Fix any date issues
         cleanSurveys.forEach((survey: any) => {
           if (survey.createdAt && typeof survey.createdAt !== 'object') {
             survey.createdAt = new Date(survey.createdAt);
           } else if (survey.createdAt?._type === 'Date') {
             survey.createdAt = new Date(survey.createdAt.value.iso);
+          } else if (survey.createdAt === undefined && survey.createdAt) {
+            survey.createdAt = new Date(survey.createdAt);
+            delete survey.createdAt;
           }
         });
         
-        // 3. Write the fixed surveys back to localStorage
         localStorage.setItem('lovable-surveys', JSON.stringify(cleanSurveys));
-        console.log('Storage repaired with clean data for all surveys');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Storage repaired with clean data for all surveys');
+        }
         
-        toast({
-          title: "Storage Repair Complete",
-          description: "Fixed potential data issues. Retrying load...",
-        });
+        if (!silent) {
+          toast({
+            title: "Storage Repair Complete",
+            description: "Fixed potential data issues. Retrying load...",
+          });
+        }
         
-        // 4. Wait a moment and trigger retry
         setTimeout(() => {
           setIsRepairing(false);
           if (onRetry) onRetry();
         }, 1000);
       } else {
-        // If no surveys found, try to create a new one for this ID
-        repairForcefully();
+        repairForcefully(silent);
       }
     } catch (error) {
       console.error('Error during storage repair:', error);
       
-      // Try one last resort - forced repair
-      repairForcefully();
+      repairForcefully(silent);
     }
   };
   
-  // Last resort - create a survey if none exists
-  const repairForcefully = () => {
+  const repairForcefully = (silent: boolean = silentMode) => {
     setIsRepairing(true);
     
     try {
-      // Create an empty survey array if none exists
       if (surveyId) {
         const emptySurvey = createEmptySurveyTemplate();
         
         if (emptySurvey) {
-          // Create a new array with just this survey
           const newSurveys = [emptySurvey];
           
-          // Save to localStorage
           localStorage.setItem('lovable-surveys', JSON.stringify(newSurveys));
           
-          console.log('Created and saved new empty survey:', emptySurvey);
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Created and saved new empty survey:', emptySurvey);
+          }
           
-          toast({
-            title: "Created New Survey",
-            description: "Created a new survey as a recovery measure. Retrying load...",
-          });
+          if (!silent) {
+            toast({
+              title: "Created New Survey",
+              description: "Created a new survey as a recovery measure. Retrying load...",
+            });
+          }
           
-          // Try a retry
           setTimeout(() => {
             setIsRepairing(false);
             if (onRetry) onRetry();
@@ -360,42 +341,40 @@ const SurveyNotFound = ({
         }
       }
       
-      // If we get here, everything failed
       setIsRepairing(false);
-      toast({
-        title: "Repair Failed",
-        description: "Could not create or find any surveys. Try creating a new survey.",
-        variant: "destructive"
-      });
+      
+      if (!silent) {
+        toast({
+          title: "Repair Failed",
+          description: "Could not create or find any surveys. Try creating a new survey.",
+          variant: "destructive"
+        });
+      }
     } catch (error) {
       console.error('Error during forced repair:', error);
       setIsRepairing(false);
-      toast({
-        title: "Repair Failed",
-        description: "An error occurred during last-resort repair attempt.",
-        variant: "destructive"
-      });
+      
+      if (!silent) {
+        toast({
+          title: "Repair Failed",
+          description: "An error occurred during last-resort repair attempt.",
+          variant: "destructive"
+        });
+      }
     }
   };
   
-  // Specific recovery for our new problematic ID
   const handleSpecificRecovery = () => {
     if (surveyId === 'survey-1742853415451') {
       setIsRepairing(true);
       
       try {
-        // Get all surveys
         const allSurveys = getStoredSurveys();
         
         if (allSurveys.length > 0) {
-          // Option 1: Find the exact survey
           const exactSurvey = allSurveys.find((s: any) => s.id === 'survey-1742853415451');
-          
-          // Option 2: Find by numeric part
           const numericSurvey = !exactSurvey ? 
             allSurveys.find((s: any) => s.id.includes('1742853415451')) : null;
-          
-          // Option 3: Use the most recent survey as a fallback
           const fallbackSurvey = (!exactSurvey && !numericSurvey) ? 
             allSurveys[allSurveys.length - 1] : null;
           
@@ -404,34 +383,27 @@ const SurveyNotFound = ({
           if (surveyToUse) {
             console.log('Using survey for recovery:', surveyToUse);
             
-            // Deep clone
             const cleanSurvey = JSON.parse(JSON.stringify(surveyToUse));
             
-            // Fix date
-            if (cleanSurvey.createdAt && typeof cleanSurvey.createdAt !== 'object') {
-              cleanSurvey.createdAt = new Date(cleanSurvey.createdAt);
-            } else if (cleanSurvey.createdAt?._type === 'Date') {
-              cleanSurvey.createdAt = new Date(cleanSurvey.createdAt.value.iso);
+            if (surveyToUse.createdAt && typeof surveyToUse.createdAt !== 'object') {
+              cleanSurvey.createdAt = new Date(surveyToUse.createdAt);
+            } else if (surveyToUse.createdAt?._type === 'Date') {
+              cleanSurvey.createdAt = new Date(surveyToUse.createdAt.value.iso);
             }
             
-            // If this is a fallback survey and we're looking for a specific ID,
-            // we'll update its ID to match what we're looking for
             if (fallbackSurvey && surveyId === 'survey-1742853415451') {
               console.log('Using fallback survey with corrected ID');
               cleanSurvey.id = 'survey-1742853415451';
             }
             
-            // Update all surveys
             const updatedSurveys = allSurveys.map((s: any) => 
               s.id === cleanSurvey.id ? cleanSurvey : s
             );
             
-            // If we used a fallback with a modified ID, we need to add it instead
             if (fallbackSurvey && surveyId === 'survey-1742853415451') {
               updatedSurveys.push(cleanSurvey);
             }
             
-            // Save back to localStorage
             localStorage.setItem('lovable-surveys', JSON.stringify(updatedSurveys));
             
             toast({
@@ -444,31 +416,28 @@ const SurveyNotFound = ({
               if (onRetry) onRetry();
             }, 1000);
           } else {
-            // Create a new empty survey as last resort
             repairForcefully();
           }
         } else {
-          // Create a new empty survey as last resort
           repairForcefully();
         }
       } catch (error) {
         console.error('Error during deep recovery:', error);
         
-        // Last resort
         repairForcefully();
       }
     }
   };
   
-  // Initialize storage if completely empty
-  const initializeEmptyStorage = () => {
+  const initializeEmptyStorage = (silent: boolean = silentMode) => {
     try {
       const raw = localStorage.getItem('lovable-surveys');
       
       if (!raw || raw === '[]' || raw === 'null') {
-        console.log('Storage appears to be completely empty, initializing it');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Storage appears to be completely empty, initializing it');
+        }
         
-        // Create a sample survey
         const sampleSurvey = {
           id: `sample-${Date.now()}`,
           brandId: "brand-1",
@@ -484,15 +453,15 @@ const SurveyNotFound = ({
           createdAt: new Date()
         };
         
-        // Initialize storage with this survey
         localStorage.setItem('lovable-surveys', JSON.stringify([sampleSurvey]));
         
-        toast({
-          title: "Storage Initialized",
-          description: "Created a sample survey to initialize empty storage",
-        });
+        if (!silent) {
+          toast({
+            title: "Storage Initialized",
+            description: "Created a sample survey to initialize empty storage",
+          });
+        }
         
-        // Try a retry
         setTimeout(() => {
           if (onRetry) onRetry();
         }, 1000);
@@ -506,6 +475,34 @@ const SurveyNotFound = ({
       return false;
     }
   };
+  
+  if (silentMode) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-4">
+        <Card className="w-full max-w-md text-center">
+          <CardHeader>
+            <div className="mx-auto rounded-full bg-primary/10 p-3 mb-4">
+              <RefreshCw className="h-6 w-6 text-primary animate-spin" />
+            </div>
+            <CardTitle className="text-2xl font-bold">Loading survey</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4">
+              Please wait while we prepare your survey...
+            </p>
+          </CardContent>
+          {onRetry && (
+            <CardFooter className="flex justify-center">
+              <Button onClick={onRetry} className="mt-2">
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Reload
+              </Button>
+            </CardFooter>
+          )}
+        </Card>
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4">
@@ -654,7 +651,6 @@ const SurveyNotFound = ({
           <Button 
             variant="outline" 
             onClick={() => {
-              // Attempt to navigate to the dashboard
               window.location.href = '/brand/dashboard';
             }}
           >
