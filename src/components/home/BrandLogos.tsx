@@ -4,9 +4,9 @@ import { motion } from 'framer-motion';
 const BrandLogos = () => {
   const brands = [
     {
-      name: 'Brand 1',
-      logo: 'https://placehold.co/200x80/f5f7ff/a6b4fc?text=Brand+1',
-      height: 'h-8'
+      name: 'Legends',
+      logo: '/lovable-uploads/2cde1c68-270f-4ea9-80ca-f4ae21e8f4c9.png',
+      height: 'h-10'
     },
     {
       name: 'Brand 2',
