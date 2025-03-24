@@ -59,7 +59,11 @@ const SurveyCreation = ({ open, onOpenChange, onCreateSurvey }: SurveyCreationPr
       return;
     }
 
-    if (!surveyQuestions.some(q => q.text.trim())) {
+    // Check if at least one question has non-empty text
+    // Fixed: The issue was here - we were checking if ANY question has text, not if ALL questions have text
+    const hasQuestions = surveyQuestions.some(q => q.text.trim() !== '');
+    
+    if (!hasQuestions) {
       toast({
         title: "Missing questions",
         description: "Please add at least one question to your survey.",
@@ -68,14 +72,20 @@ const SurveyCreation = ({ open, onOpenChange, onCreateSurvey }: SurveyCreationPr
       return;
     }
 
-    // Create survey
-    const validQuestions = surveyQuestions.filter(q => q.text.trim());
+    // Create survey - only include questions that have text
+    const validQuestions = surveyQuestions.filter(q => q.text.trim() !== '');
     onCreateSurvey(surveyTitle, surveyDescription, validQuestions);
 
     // Reset form
     setSurveyTitle('');
     setSurveyDescription('');
     setSurveyQuestions([{text: '', description: ''}]);
+    
+    // Show success toast
+    toast({
+      title: "Survey created",
+      description: "Your survey has been created successfully.",
+    });
   };
 
   return (
