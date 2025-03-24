@@ -1,9 +1,10 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { Plus, MessageSquare, Link as LinkIcon, RefreshCw } from 'lucide-react';
+import { Plus, MessageSquare, Link as LinkIcon, RefreshCw, BarChart } from 'lucide-react';
 import { Survey } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 interface SurveyListProps {
   surveys: Survey[];
@@ -16,6 +17,7 @@ const SurveyList = ({ surveys, brandId, onCreateSurvey, onShareSurvey }: SurveyL
   const brandSurveys = surveys.filter(survey => survey.brandId === brandId);
   const { toast } = useToast();
   const [isRepairing, setIsRepairing] = useState(false);
+  const navigate = useNavigate();
   
   useEffect(() => {
     try {
@@ -112,6 +114,10 @@ const SurveyList = ({ surveys, brandId, onCreateSurvey, onShareSurvey }: SurveyL
     }
   };
 
+  const handleViewResponses = (surveyId: string) => {
+    navigate(`/survey-responses/${surveyId}`);
+  };
+
   return (
     <>
       <div className="flex justify-between items-center mb-6">
@@ -159,8 +165,12 @@ const SurveyList = ({ surveys, brandId, onCreateSurvey, onShareSurvey }: SurveyL
                 </div>
               </CardContent>
               <CardFooter className="flex justify-between">
-                <Button variant="outline" size="sm">
-                  View Responses
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleViewResponses(survey.id)}
+                >
+                  <BarChart className="h-4 w-4 mr-2" /> View Responses
                 </Button>
                 <Button 
                   variant="secondary" 

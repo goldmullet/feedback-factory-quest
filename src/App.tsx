@@ -18,6 +18,7 @@ import NotFound from "./pages/NotFound";
 import SignIn from "./pages/Auth/SignIn";
 import SignUp from "./pages/Auth/SignUp";
 import SurveyResponse from "./pages/SurveyResponse";
+import SurveyResponses from "./pages/SurveyResponses";
 
 const queryClient = new QueryClient();
 
@@ -42,6 +43,11 @@ const AnimatedRoutes = () => {
         <Route path="/brand/setup" element={
           <ProtectedRoute>
             <Setup />
+          </ProtectedRoute>
+        } />
+        <Route path="/survey-responses/:surveyId" element={
+          <ProtectedRoute>
+            <SurveyResponses />
           </ProtectedRoute>
         } />
         <Route path="/consumer" element={
