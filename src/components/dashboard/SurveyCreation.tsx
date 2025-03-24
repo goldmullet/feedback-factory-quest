@@ -59,35 +59,44 @@ const SurveyCreation = ({ open, onOpenChange, onCreateSurvey }: SurveyCreationPr
       return;
     }
 
-    // Filter out questions with empty text
-    const validQuestions = surveyQuestions.filter(q => q.text.trim() !== '');
+    // Check for non-empty questions
+    const validQuestions = surveyQuestions.filter(q => q.text.trim().length > 0);
     
-    // Check if there are any valid questions
+    // Ensure there's at least one valid question
     if (validQuestions.length === 0) {
       toast({
         title: "Missing questions",
-        description: "Please add at least one question with text to your survey.",
+        description: "Please add at least one question with non-empty text to your survey.",
         variant: "destructive"
       });
       return;
     }
 
-    // Create survey with valid questions only
-    onCreateSurvey(surveyTitle, surveyDescription, validQuestions);
-
-    // Reset form
-    setSurveyTitle('');
-    setSurveyDescription('');
-    setSurveyQuestions([{text: '', description: ''}]);
-    
-    // Close dialog
-    onOpenChange(false);
-    
-    // Show success toast
-    toast({
-      title: "Survey created",
-      description: "Your survey has been created successfully."
-    });
+    try {
+      // Create survey with valid questions only
+      onCreateSurvey(surveyTitle, surveyDescription, validQuestions);
+      
+      // Reset form
+      setSurveyTitle('');
+      setSurveyDescription('');
+      setSurveyQuestions([{text: '', description: ''}]);
+      
+      // Close dialog
+      onOpenChange(false);
+      
+      // Show success toast
+      toast({
+        title: "Survey created",
+        description: "Your survey has been created successfully."
+      });
+    } catch (error) {
+      console.error("Error creating survey:", error);
+      toast({
+        title: "Error",
+        description: "There was an error creating your survey. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (

@@ -26,6 +26,7 @@ const Question = ({
             onChange={(e) => onQuestionChange?.(e.target.value)}
             rows={2}
             placeholder="Enter your question here..."
+            required
           />
         ) : (
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight">{question}</h2>
