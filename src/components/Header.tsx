@@ -2,11 +2,21 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Mic, User } from 'lucide-react';
+import { Mic, User, LogOut } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const Header = () => {
   const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
+  const { user, isAuthenticated, logout } = useAuth();
 
   // Add scroll listener
   useEffect(() => {
@@ -35,39 +45,76 @@ const Header = () => {
         </Link>
         
         <nav className="hidden md:flex items-center space-x-10">
-          <Link 
-            to="/consumer" 
-            className={`text-base font-medium transition-colors ${
-              isActive('/consumer') ? 'text-primary' : 'text-foreground/80 hover:text-foreground'
-            }`}
-          >
-            Leave Feedback
-          </Link>
-          <Link 
-            to="/brand/dashboard" 
-            className={`text-base font-medium transition-colors ${
-              isActive('/brand/dashboard') ? 'text-primary' : 'text-foreground/80 hover:text-foreground'
-            }`}
-          >
-            Dashboard
-          </Link>
-          <Link 
-            to="/brand/setup" 
-            className={`text-base font-medium transition-colors ${
-              isActive('/brand/setup') ? 'text-primary' : 'text-foreground/80 hover:text-foreground'
-            }`}
-          >
-            Setup
-          </Link>
+          {isAuthenticated ? (
+            <>
+              <Link 
+                to="/consumer" 
+                className={`text-base font-medium transition-colors ${
+                  isActive('/consumer') ? 'text-primary' : 'text-foreground/80 hover:text-foreground'
+                }`}
+              >
+                Leave Feedback
+              </Link>
+              <Link 
+                to="/brand/dashboard" 
+                className={`text-base font-medium transition-colors ${
+                  isActive('/brand/dashboard') ? 'text-primary' : 'text-foreground/80 hover:text-foreground'
+                }`}
+              >
+                Dashboard
+              </Link>
+              <Link 
+                to="/brand/setup" 
+                className={`text-base font-medium transition-colors ${
+                  isActive('/brand/setup') ? 'text-primary' : 'text-foreground/80 hover:text-foreground'
+                }`}
+              >
+                Setup
+              </Link>
+            </>
+          ) : (
+            // Only show "Features" link for non-authenticated users
+            <Link 
+              to="/#features" 
+              className="text-base font-medium transition-colors text-foreground/80 hover:text-foreground"
+            >
+              Features
+            </Link>
+          )}
         </nav>
         
         <div className="flex items-center space-x-4">
-          <Button variant="ghost" size="icon" className="hidden md:flex">
-            <User className="h-5 w-5" />
-          </Button>
-          <Button className="rounded-full px-6 bg-primary/90 hover:bg-primary shadow-button">
-            Get Started
-          </Button>
+          {isAuthenticated ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full">
+                  <User className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>{user?.name || 'User'}</DropdownMenuLabel>
+                <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                  {user?.email}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={logout} className="text-destructive cursor-pointer">
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <>
+              <Link to="/auth/signin">
+                <Button variant="ghost">Sign In</Button>
+              </Link>
+              <Link to="/auth/signup">
+                <Button className="rounded-full px-6 bg-primary/90 hover:bg-primary shadow-button">
+                  Get Started
+                </Button>
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </header>
