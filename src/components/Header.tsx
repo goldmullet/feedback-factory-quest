@@ -73,13 +73,21 @@ const Header = () => {
               </Link>
             </>
           ) : (
-            // Only show "Features" link for non-authenticated users
-            <Link 
-              to="/#features" 
-              className="text-base font-medium transition-colors text-foreground/80 hover:text-foreground"
-            >
-              Features
-            </Link>
+            // Navigation links for non-authenticated users
+            <>
+              <Link 
+                to="/#features" 
+                className="text-base font-medium transition-colors text-foreground/80 hover:text-foreground"
+              >
+                Features
+              </Link>
+              <Link 
+                to="/#how-it-works" 
+                className="text-base font-medium transition-colors text-foreground/80 hover:text-foreground"
+              >
+                How It Works
+              </Link>
+            </>
           )}
         </nav>
         
