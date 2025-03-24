@@ -32,8 +32,7 @@ const HeroSection = ({ scrollToFeatures }: HeroSectionProps) => {
             Want to Know Your Customer? Just Ask — and Listen.
           </h1>
           <p className="text-xl md:text-2xl text-slate-600 dark:text-slate-300 mb-10 leading-relaxed">
-            Collect authentic customer feedback through voice recordings. 
-            Gain insights, reduce returns, and reward your customers.
+            Hear your customers. Understand what they truly need. Reduce returns and grow LTV with voice-powered feedback.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4 mb-12">
             <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-lg h-14 px-8 rounded-full">
