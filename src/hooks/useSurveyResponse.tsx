@@ -18,7 +18,6 @@ export function useSurveyResponse() {
   const [loading, setLoading] = useState(true);
   const [currentStep, setCurrentStep] = useState<SurveyStep>('intro');
   const [answers, setAnswers] = useState<{questionId: string, answer: string}[]>([]);
-  const [audioBlobs, setAudioBlobs] = useState<{[key: string]: Blob}>({});
   const [retriesCount, setRetriesCount] = useState(0);
   const [directLocalStorageCheck, setDirectLocalStorageCheck] = useState(false);
   const [manualRecoveryAttempted, setManualRecoveryAttempted] = useState(false);
@@ -377,19 +376,12 @@ export function useSurveyResponse() {
     );
   };
 
-  const handleAudioRecorded = (questionId: string, blob: Blob) => {
-    setAudioBlobs(prev => ({
-      ...prev,
-      [questionId]: blob
-    }));
-    
-    handleAnswerChange(questionId, "[Audio response recorded]");
-  };
-
-  const handleSubmitSurvey = (respondentInfo: RespondentInfo) => {
+  const handleSubmitSurvey = (respondentInfo: RespondentInfo, audioBlobs: {[key: string]: Blob} = {}) => {
     const audioRecordingsCount = Object.keys(audioBlobs).length;
+    console.log('Audio recordings count:', audioRecordingsCount);
+    console.log('Required questions count:', survey?.questions.length);
     
-    if (audioRecordingsCount < survey?.questions.length!) {
+    if (audioRecordingsCount < (survey?.questions.length || 0)) {
       toast({
         title: "Missing Audio Responses",
         description: "Please record audio answers for all questions.",
@@ -400,6 +392,7 @@ export function useSurveyResponse() {
     
     try {
       if (survey) {
+        console.log('Adding survey response with audio blobs:', Object.keys(audioBlobs).length);
         addSurveyResponse(survey.id, answers, respondentInfo, audioBlobs);
         
         toast({
@@ -455,7 +448,6 @@ export function useSurveyResponse() {
     loading,
     currentStep,
     answers,
-    audioBlobs,
     formErrors,
     respondentInfo,
     setRespondentInfo,
@@ -463,8 +455,6 @@ export function useSurveyResponse() {
     setCurrentStep,
     handleInfoSubmit,
     handleAnswerChange,
-    handleAudioRecorded,
-    setAudioBlobs,
     handleSubmitSurvey,
     handleRetry,
     handleNavigateHome,

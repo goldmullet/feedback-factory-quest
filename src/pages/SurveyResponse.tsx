@@ -11,17 +11,26 @@ import { useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useFeedback } from '@/context/feedback';
 
+// Add audioBlobs to the global Window interface
+declare global {
+  interface Window {
+    audioBlobs?: {[key: string]: Blob};
+  }
+}
+
 const SurveyResponse = () => {
   const { surveyId } = useParams();
   const { surveys } = useFeedback();
   const [manualRecoveryAttempted, setManualRecoveryAttempted] = useState(false);
+  
+  // Initialize global audioBlobs
+  window.audioBlobs = {};
   
   const {
     survey,
     loading,
     currentStep,
     answers,
-    audioBlobs,
     formErrors,
     respondentInfo,
     setRespondentInfo,
@@ -29,7 +38,6 @@ const SurveyResponse = () => {
     setCurrentStep,
     handleInfoSubmit,
     handleAnswerChange,
-    handleAudioRecorded,
     handleSubmitSurvey,
     handleRetry,
     handleNavigateHome,
@@ -164,6 +172,13 @@ const SurveyResponse = () => {
     />;
   }
 
+  // Modified handleSubmit to get audioBlobs from window object
+  const handleSubmit = () => {
+    const globalAudioBlobs = window.audioBlobs || {};
+    console.log('Submitting survey with global audio blobs:', Object.keys(globalAudioBlobs).length);
+    handleSubmitSurvey(respondentInfo, globalAudioBlobs);
+  };
+
   return (
     <SurveyResponseLayout>
       {currentStep === 'intro' && (
@@ -187,7 +202,7 @@ const SurveyResponse = () => {
           survey={survey}
           answers={answers}
           onAnswerChange={handleAnswerChange}
-          onSubmit={() => handleSubmitSurvey(respondentInfo)}
+          onSubmit={handleSubmit}
         />
       )}
 

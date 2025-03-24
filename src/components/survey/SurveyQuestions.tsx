@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Question from '@/components/Question';
@@ -25,13 +25,24 @@ const SurveyQuestions = ({
   
   const currentQuestion = survey.questions[currentQuestionIndex];
 
+  // Log audio blobs whenever they change
+  useEffect(() => {
+    console.log('Current audioBlobs in SurveyQuestions:', Object.keys(audioBlobs).length);
+  }, [audioBlobs]);
+
   const handleAudioRecorded = (audioBlob: Blob) => {
     if (!currentQuestion) return;
     
-    setAudioBlobs(prev => ({
-      ...prev,
-      [currentQuestion.id]: audioBlob
-    }));
+    console.log(`Audio recorded for question ${currentQuestion.id}`);
+    
+    setAudioBlobs(prev => {
+      const updated = {
+        ...prev,
+        [currentQuestion.id]: audioBlob
+      };
+      console.log('Updated audioBlobs:', Object.keys(updated));
+      return updated;
+    });
     
     // We'll use a placeholder text for audio answers to maintain compatibility
     onAnswerChange(currentQuestion.id, "[Audio response recorded]");
@@ -54,16 +65,35 @@ const SurveyQuestions = ({
     if (!currentQuestion) return false;
     
     // Check if this question has an audio recording
-    return audioBlobs[currentQuestion.id] !== undefined;
+    const hasBlob = audioBlobs[currentQuestion.id] !== undefined;
+    console.log(`Checking current question ${currentQuestion.id} has answer:`, hasBlob);
+    return hasBlob;
   };
   
   const isLastQuestion = currentQuestionIndex === survey.questions.length - 1;
   const isFirstQuestion = currentQuestionIndex === 0;
 
   // Check if all questions have audio answers
-  const allQuestionsAnswered = survey.questions.every(question => {
-    return audioBlobs[question.id] !== undefined;
-  });
+  const allQuestionsAnswered = () => {
+    const result = survey.questions.every(question => {
+      const hasAnswer = audioBlobs[question.id] !== undefined;
+      console.log(`Question ${question.id} has audio: ${hasAnswer}`);
+      return hasAnswer;
+    });
+    console.log('All questions answered:', result);
+    return result;
+  };
+
+  // Submit handler that passes audioBlobs to parent
+  const handleSubmit = () => {
+    // Transfer audio blobs to parent component
+    if (window.audioBlobs) {
+      window.audioBlobs = audioBlobs;
+    }
+    
+    console.log('Submitting survey with audio blobs:', Object.keys(audioBlobs).length);
+    onSubmit();
+  };
 
   return (
     <Card className="glass-effect">
@@ -125,8 +155,8 @@ const SurveyQuestions = ({
             </Button>
           ) : (
             <Button 
-              onClick={onSubmit}
-              disabled={!allQuestionsAnswered}
+              onClick={handleSubmit}
+              disabled={!allQuestionsAnswered()}
             >
               Submit Feedback
             </Button>
