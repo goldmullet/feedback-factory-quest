@@ -1,8 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertCircle, Home, RefreshCw, ExternalLink } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface SurveyNotFoundProps {
   onNavigateHome: () => void;
@@ -12,6 +13,7 @@ interface SurveyNotFoundProps {
 
 const SurveyNotFound = ({ onNavigateHome, surveyId, onRetry }: SurveyNotFoundProps) => {
   const [showDebugInfo, setShowDebugInfo] = useState(false);
+  const { toast } = useToast();
   
   // Try to fetch stored surveys directly
   const getStoredSurveys = () => {
@@ -27,7 +29,22 @@ const SurveyNotFound = ({ onNavigateHome, surveyId, onRetry }: SurveyNotFoundPro
   };
   
   const storedSurveys = getStoredSurveys();
-  const surveyExists = surveyId && storedSurveys.some((s: any) => s.id === surveyId);
+  const surveyExists = surveyId && storedSurveys.some((s: any) => 
+    s.id === surveyId || (typeof s.id === 'string' && s.id.toLowerCase() === surveyId.toLowerCase())
+  );
+  
+  // Display a toast with survey info when component mounts
+  useEffect(() => {
+    if (surveyId) {
+      toast({
+        title: "Survey Not Found",
+        description: surveyExists 
+          ? `Survey exists in storage (ID: ${surveyId}) but couldn't be loaded properly.` 
+          : `No survey found with ID: ${surveyId}`,
+        variant: "destructive"
+      });
+    }
+  }, [surveyId, surveyExists, toast]);
   
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4">
@@ -41,7 +58,7 @@ const SurveyNotFound = ({ onNavigateHome, surveyId, onRetry }: SurveyNotFoundPro
         <CardContent>
           <p className="text-muted-foreground mb-4">
             {surveyExists 
-              ? "The survey exists in storage but couldn't be loaded properly." 
+              ? "The survey exists in storage but couldn't be loaded properly. Try refreshing or clicking Retry below." 
               : "The survey you're looking for doesn't exist or has been removed."}
           </p>
           {surveyId && (
@@ -55,8 +72,9 @@ const SurveyNotFound = ({ onNavigateHome, surveyId, onRetry }: SurveyNotFoundPro
               <h3 className="font-medium mb-2 text-sm">Debug Information:</h3>
               <ul className="space-y-2 text-xs text-muted-foreground">
                 <li>• Surveys in localStorage: {storedSurveys.length}</li>
-                <li>• Survey IDs: {storedSurveys.map((s: any) => s.id).join(', ')}</li>
+                <li>• Survey IDs: {storedSurveys.map((s: any) => s.id.slice(0, 20) + (s.id.length > 20 ? '...' : '')).join(', ')}</li>
                 <li>• Current URL: {window.location.href}</li>
+                <li>• Survey exists in storage: {surveyExists ? 'Yes' : 'No'}</li>
               </ul>
             </div>
           )}
@@ -69,7 +87,7 @@ const SurveyNotFound = ({ onNavigateHome, surveyId, onRetry }: SurveyNotFoundPro
             {showDebugInfo ? 'Hide' : 'Show'} Debug Info
           </Button>
         </CardContent>
-        <CardFooter className="flex justify-center gap-4">
+        <CardFooter className="flex flex-wrap justify-center gap-4">
           <Button variant="outline" onClick={onNavigateHome}>
             <Home className="mr-2 h-4 w-4" />
             Home

@@ -21,6 +21,9 @@ export function useSurveyResponse() {
   // Find the survey based on surveyId with improved debugging
   useEffect(() => {
     const findSurvey = async () => {
+      console.log(`[Looking for survey] ${surveyId}`);
+      setLoading(true);
+      
       if (!surveyId) {
         console.error('No surveyId provided in URL');
         setLoading(false);
@@ -42,29 +45,57 @@ export function useSurveyResponse() {
       }
       
       // If not found in context, try to find in localStorage directly
-      console.log('Survey not found in context, checking localStorage...');
+      console.log('Survey not found in context, checking localStorage directly...');
       try {
         const storedSurveysRaw = localStorage.getItem('lovable-surveys');
         if (storedSurveysRaw) {
-          const storedSurveys = JSON.parse(storedSurveysRaw);
           console.log('Raw stored surveys from localStorage:', storedSurveysRaw);
-          console.log('Parsed surveys from localStorage:', storedSurveys.length);
           
-          const localStorageSurvey = storedSurveys.find((s: any) => s.id === surveyId);
+          // Parse the stored surveys
+          let storedSurveys;
+          try {
+            storedSurveys = JSON.parse(storedSurveysRaw);
+            console.log('Number of surveys in localStorage:', storedSurveys.length);
+            console.log('Available survey IDs:', storedSurveys.map((s: any) => s.id).join(', '));
+          } catch (parseError) {
+            console.error('Error parsing localStorage surveys:', parseError);
+            toast({
+              title: "Data Error",
+              description: "There was an error loading survey data. Please try again.",
+              variant: "destructive"
+            });
+            setLoading(false);
+            return;
+          }
+          
+          // Try exact match
+          let localStorageSurvey = storedSurveys.find((s: any) => s.id === surveyId);
+          
+          // If not found, try case-insensitive match
+          if (!localStorageSurvey) {
+            console.log('Trying case-insensitive match...');
+            localStorageSurvey = storedSurveys.find((s: any) => 
+              typeof s.id === 'string' && s.id.toLowerCase() === surveyId.toLowerCase()
+            );
+          }
           
           if (localStorageSurvey) {
             console.log('Survey found in localStorage:', localStorageSurvey);
-            console.log('Survey createdAt:', localStorageSurvey.createdAt);
+            
+            // Deep clone to avoid reference issues
+            const surveyToUse = JSON.parse(JSON.stringify(localStorageSurvey));
             
             // Convert createdAt to Date object if needed
-            if (localStorageSurvey.createdAt && typeof localStorageSurvey.createdAt !== 'object') {
-              localStorageSurvey.createdAt = new Date(localStorageSurvey.createdAt);
-            } else if (localStorageSurvey.createdAt?._type === 'Date') {
-              localStorageSurvey.createdAt = new Date(localStorageSurvey.createdAt.value.iso);
+            if (surveyToUse.createdAt && typeof surveyToUse.createdAt !== 'object') {
+              surveyToUse.createdAt = new Date(surveyToUse.createdAt);
+            } else if (surveyToUse.createdAt?._type === 'Date') {
+              surveyToUse.createdAt = new Date(surveyToUse.createdAt.value.iso);
             }
             
-            setSurvey(localStorageSurvey as Survey);
-            initializeAnswers(localStorageSurvey as Survey);
+            console.log('Using survey with processed date:', surveyToUse);
+            
+            setSurvey(surveyToUse as Survey);
+            initializeAnswers(surveyToUse as Survey);
             setLoading(false);
             return;
           } else {
@@ -75,16 +106,21 @@ export function useSurveyResponse() {
           console.error('No surveys found in localStorage');
         }
       } catch (error) {
-        console.error('Error parsing stored surveys:', error);
+        console.error('Error accessing stored surveys:', error);
       }
       
       setLoading(false);
     };
 
     findSurvey();
-  }, [surveyId, surveys, retriesCount]);
+  }, [surveyId, surveys, retriesCount, toast]);
 
   const initializeAnswers = (surveyData: Survey) => {
+    if (!surveyData.questions || !Array.isArray(surveyData.questions)) {
+      console.error('Invalid survey questions data:', surveyData);
+      return;
+    }
+    
     setAnswers(
       surveyData.questions.map(q => ({
         questionId: q.id,
@@ -132,10 +168,17 @@ export function useSurveyResponse() {
     try {
       if (survey) {
         addSurveyResponse(survey.id, answers, respondentInfo);
+        
+        // Show success and move to thank you screen
+        toast({
+          title: "Success",
+          description: "Your feedback has been submitted successfully.",
+        });
+        
+        setCurrentStep('thank-you');
+      } else {
+        throw new Error("Survey not found");
       }
-      
-      // Show success and move to thank you screen
-      setCurrentStep('thank-you');
     } catch (error) {
       console.error("Error submitting survey response:", error);
       toast({
@@ -149,12 +192,6 @@ export function useSurveyResponse() {
   const handleRetry = () => {
     setLoading(true);
     setRetriesCount(prev => prev + 1);
-    // Give time for context to update
-    setTimeout(() => {
-      console.log("Retrying to find survey...");
-      // This will trigger the useEffect again
-      setLoading(false);
-    }, 1000);
   };
 
   const handleNavigateHome = () => {

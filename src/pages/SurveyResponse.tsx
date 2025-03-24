@@ -8,7 +8,7 @@ import SurveyNotFound from '@/components/survey/SurveyNotFound';
 import SurveyLoading from '@/components/survey/SurveyLoading';
 import SurveyResponseLayout from '@/components/survey/SurveyResponseLayout';
 import { useParams } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const SurveyResponse = () => {
   const { surveyId } = useParams();
@@ -31,6 +31,16 @@ const SurveyResponse = () => {
     name: '',
     email: ''
   });
+  
+  // Debug output on mount and when survey status changes
+  useEffect(() => {
+    console.log(`SurveyResponse rendered - Survey ID: ${surveyId}`);
+    console.log(`Survey loaded: ${!!survey}, Loading: ${loading}`);
+    
+    if (survey) {
+      console.log('Successfully loaded survey:', survey.title);
+    }
+  }, [surveyId, survey, loading]);
 
   if (loading) {
     return <SurveyLoading />;
