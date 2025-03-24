@@ -9,9 +9,11 @@ import SurveyLoading from '@/components/survey/SurveyLoading';
 import SurveyResponseLayout from '@/components/survey/SurveyResponseLayout';
 import { useParams } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 const SurveyResponse = () => {
   const { surveyId } = useParams();
+  const { toast } = useToast();
   const {
     survey,
     loading,
@@ -35,13 +37,18 @@ const SurveyResponse = () => {
   
   // Debug output on mount and when survey status changes
   useEffect(() => {
-    console.log(`SurveyResponse rendered - Survey ID: ${surveyId}`);
+    console.log(`SurveyResponse rendered - Survey ID from URL: ${surveyId}`);
     console.log(`Survey loaded: ${!!survey}, Loading: ${loading}`);
     
     if (survey) {
       console.log('Successfully loaded survey:', survey.title);
+      // Notify with toast for successful load
+      toast({
+        title: "Survey Loaded",
+        description: `Successfully loaded "${survey.title}" with ${survey.questions.length} questions`,
+      });
     }
-  }, [surveyId, survey, loading]);
+  }, [surveyId, survey, loading, toast]);
 
   if (loading) {
     return <SurveyLoading />;

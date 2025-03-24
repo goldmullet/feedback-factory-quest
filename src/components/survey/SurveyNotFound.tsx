@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle, Home, RefreshCw, ExternalLink, Search } from 'lucide-react';
+import { AlertCircle, Home, RefreshCw, ExternalLink, Search, Database } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface SurveyNotFoundProps {
@@ -41,11 +41,22 @@ const SurveyNotFound = ({
   const caseInsensitiveMatch = surveyId && storedSurveys.some((s: any) => 
     typeof s.id === 'string' && s.id.toLowerCase() === surveyId.toLowerCase()
   );
-  const surveyExists = exactMatch || caseInsensitiveMatch;
+  const partialMatch = surveyId && storedSurveys.some((s: any) => 
+    typeof s.id === 'string' && s.id.includes(surveyId) || (surveyId && surveyId.includes(s.id))
+  );
+  const surveyExists = exactMatch || caseInsensitiveMatch || partialMatch;
   
   // Display a toast with survey info when component mounts
   useEffect(() => {
     if (surveyId) {
+      // Check if surveyId has URL encoded characters and decode them
+      const decodedSurveyId = decodeURIComponent(surveyId);
+      const isEncoded = decodedSurveyId !== surveyId;
+      
+      if (isEncoded) {
+        console.log(`Survey ID was URL encoded. Decoded from "${surveyId}" to "${decodedSurveyId}"`);
+      }
+      
       toast({
         title: "Survey Not Found",
         description: surveyExists 
@@ -53,11 +64,21 @@ const SurveyNotFound = ({
           : `No survey found with ID: ${surveyId}`,
         variant: "destructive"
       });
+      
+      // Force a check to see if any surveys exist at all
+      if (storedSurveys.length > 0) {
+        console.log(`Found ${storedSurveys.length} surveys in localStorage`);
+      } else {
+        console.error('No surveys found in localStorage at all');
+      }
     }
-  }, [surveyId, surveyExists, toast]);
+  }, [surveyId, surveyExists, toast, storedSurveys.length]);
   
   const handleCheckForExactSurvey = () => {
     if (!surveyId) return;
+    
+    // Try decode the survey ID if it's URL encoded
+    const decodedSurveyId = decodeURIComponent(surveyId);
     
     // Just to double-check, directly try to find the survey in localStorage
     try {
@@ -68,10 +89,15 @@ const SurveyNotFound = ({
         // Log all survey IDs
         console.log('All survey IDs in localStorage:', parsedSurveys.map((s: any) => s.id));
         
-        // Find the exact survey we're looking for
+        // Find different match types
         const exactSurvey = parsedSurveys.find((s: any) => s.id === surveyId);
+        const decodedMatch = decodedSurveyId !== surveyId ? 
+          parsedSurveys.find((s: any) => s.id === decodedSurveyId) : null;
         const caseInsensitiveSurvey = parsedSurveys.find((s: any) => 
           typeof s.id === 'string' && s.id.toLowerCase() === surveyId.toLowerCase()
+        );
+        const partialMatchSurvey = parsedSurveys.find((s: any) => 
+          typeof s.id === 'string' && (s.id.includes(surveyId) || surveyId.includes(s.id))
         );
         
         if (exactSurvey) {
@@ -80,11 +106,23 @@ const SurveyNotFound = ({
             title: "Survey Found in Storage",
             description: "The survey exists in localStorage with an exact ID match.",
           });
+        } else if (decodedMatch) {
+          console.log('Found URL-decoded match survey:', decodedMatch);
+          toast({
+            title: "Survey Found via URL Decoding",
+            description: "The survey exists in localStorage with a URL-decoded ID match.",
+          });
         } else if (caseInsensitiveSurvey) {
           console.log('Found case-insensitive match survey:', caseInsensitiveSurvey);
           toast({
             title: "Survey Found in Storage",
             description: "The survey exists in localStorage with a case-insensitive ID match.",
+          });
+        } else if (partialMatchSurvey) {
+          console.log('Found partial match survey:', partialMatchSurvey);
+          toast({
+            title: "Survey Found in Storage",
+            description: "A survey with a similar ID exists in localStorage.",
           });
         } else {
           console.log('Survey not found in localStorage, even on manual check');
@@ -118,6 +156,11 @@ const SurveyNotFound = ({
           {surveyId && (
             <div className="bg-muted p-3 rounded-md mb-6 text-sm overflow-hidden">
               <p className="font-mono overflow-ellipsis overflow-hidden">ID: {surveyId}</p>
+              {decodeURIComponent(surveyId) !== surveyId && (
+                <p className="font-mono text-xs mt-1 text-muted-foreground">
+                  Decoded: {decodeURIComponent(surveyId)}
+                </p>
+              )}
               <div className="mt-2 flex space-x-2 justify-center">
                 <Button 
                   variant="outline" 
@@ -126,6 +169,17 @@ const SurveyNotFound = ({
                 >
                   <Search className="h-3 w-3 mr-1" />
                   Check Again
+                </Button>
+                <Button 
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    // Try to view localStorage
+                    console.log('Current localStorage for surveys:', localStorage.getItem('lovable-surveys'));
+                  }}
+                >
+                  <Database className="h-3 w-3 mr-1" />
+                  View Store
                 </Button>
               </div>
             </div>
@@ -138,7 +192,9 @@ const SurveyNotFound = ({
                 <li>• Surveys in localStorage: {storedSurveys.length}</li>
                 <li>• Exact match in localStorage: {exactMatch ? 'Yes' : 'No'}</li>
                 <li>• Case-insensitive match: {caseInsensitiveMatch ? 'Yes' : 'No'}</li>
+                <li>• Partial match: {partialMatch ? 'Yes' : 'No'}</li>
                 <li>• Direct localStorage check performed: {directLocalStorageCheck ? 'Yes' : 'No'}</li>
+                <li>• URL decoded ID differs: {surveyId && decodeURIComponent(surveyId) !== surveyId ? 'Yes' : 'No'}</li>
                 <li>• Current URL: {window.location.href}</li>
                 <li>• Available IDs: {storedSurveys.slice(0, 3).map((s: any) => 
                     s.id.slice(0, 15) + (s.id.length > 15 ? '...' : '')

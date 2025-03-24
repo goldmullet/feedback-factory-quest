@@ -34,14 +34,43 @@ export function useSurveyResponse() {
       console.log(`[Try ${retriesCount + 1}] Looking for survey with ID:`, surveyId);
       console.log('Available surveys in context:', surveys.length);
       
-      // First, try to find the survey in the context
+      // Try URL decoding in case the ID was encoded
+      const decodedSurveyId = decodeURIComponent(surveyId);
+      const isEncoded = decodedSurveyId !== surveyId;
+      
+      if (isEncoded) {
+        console.log(`Survey ID was URL encoded. Decoded from "${surveyId}" to "${decodedSurveyId}"`);
+      }
+      
+      // First, try to find the survey with the exact ID in the context
       let foundSurvey = surveys.find(s => s.id === surveyId);
       
-      // If not found with exact match, try case-insensitive match in context
+      // If not found, try with the decoded ID
+      if (!foundSurvey && isEncoded) {
+        console.log('Trying with decoded ID...');
+        foundSurvey = surveys.find(s => s.id === decodedSurveyId);
+      }
+      
+      // If still not found, try case-insensitive match in context
       if (!foundSurvey) {
         console.log('Trying case-insensitive match in context...');
         foundSurvey = surveys.find(s => 
-          typeof s.id === 'string' && s.id.toLowerCase() === surveyId.toLowerCase()
+          typeof s.id === 'string' && (
+            s.id.toLowerCase() === surveyId.toLowerCase() ||
+            (isEncoded && s.id.toLowerCase() === decodedSurveyId.toLowerCase())
+          )
+        );
+      }
+      
+      // If still not found, try partial match
+      if (!foundSurvey) {
+        console.log('Trying partial match in context...');
+        foundSurvey = surveys.find(s => 
+          typeof s.id === 'string' && (
+            s.id.includes(surveyId) || 
+            surveyId.includes(s.id) ||
+            (isEncoded && (s.id.includes(decodedSurveyId) || decodedSurveyId.includes(s.id)))
+          )
         );
       }
       
@@ -70,12 +99,25 @@ export function useSurveyResponse() {
             
             // Check if our survey ID is in the localStorage data
             const exactMatch = storedSurveys.some((s: any) => s.id === surveyId);
+            const decodedMatch = isEncoded && storedSurveys.some((s: any) => s.id === decodedSurveyId);
             const caseInsensitiveMatch = storedSurveys.some((s: any) => 
-              typeof s.id === 'string' && s.id.toLowerCase() === surveyId.toLowerCase()
+              typeof s.id === 'string' && (
+                s.id.toLowerCase() === surveyId.toLowerCase() ||
+                (isEncoded && s.id.toLowerCase() === decodedSurveyId.toLowerCase())
+              )
+            );
+            const partialMatch = storedSurveys.some((s: any) => 
+              typeof s.id === 'string' && (
+                s.id.includes(surveyId) || 
+                surveyId.includes(s.id) ||
+                (isEncoded && (s.id.includes(decodedSurveyId) || decodedSurveyId.includes(s.id)))
+              )
             );
             
             console.log(`Survey ID exact match in localStorage: ${exactMatch}`);
+            console.log(`Survey ID decoded match in localStorage: ${decodedMatch}`);
             console.log(`Survey ID case-insensitive match in localStorage: ${caseInsensitiveMatch}`);
+            console.log(`Survey ID partial match in localStorage: ${partialMatch}`);
             
           } catch (parseError) {
             console.error('Error parsing localStorage surveys:', parseError);
@@ -91,11 +133,32 @@ export function useSurveyResponse() {
           // Try exact match
           let localStorageSurvey = storedSurveys.find((s: any) => s.id === surveyId);
           
+          // If not found, try with decoded ID
+          if (!localStorageSurvey && isEncoded) {
+            console.log('Trying with decoded ID in localStorage...');
+            localStorageSurvey = storedSurveys.find((s: any) => s.id === decodedSurveyId);
+          }
+          
           // If not found, try case-insensitive match
           if (!localStorageSurvey) {
             console.log('Trying case-insensitive match in localStorage...');
             localStorageSurvey = storedSurveys.find((s: any) => 
-              typeof s.id === 'string' && s.id.toLowerCase() === surveyId.toLowerCase()
+              typeof s.id === 'string' && (
+                s.id.toLowerCase() === surveyId.toLowerCase() ||
+                (isEncoded && s.id.toLowerCase() === decodedSurveyId.toLowerCase())
+              )
+            );
+          }
+          
+          // If not found, try partial match
+          if (!localStorageSurvey) {
+            console.log('Trying partial match in localStorage...');
+            localStorageSurvey = storedSurveys.find((s: any) => 
+              typeof s.id === 'string' && (
+                s.id.includes(surveyId) || 
+                surveyId.includes(s.id) ||
+                (isEncoded && (s.id.includes(decodedSurveyId) || decodedSurveyId.includes(s.id)))
+              )
             );
           }
           
@@ -120,6 +183,9 @@ export function useSurveyResponse() {
             return;
           } else {
             console.error('Survey not found in localStorage with ID:', surveyId);
+            if (isEncoded) {
+              console.error('Also tried with decoded ID:', decodedSurveyId);
+            }
             console.log('Available survey IDs in localStorage:', storedSurveys.map((s: any) => s.id).join(', '));
           }
         } else {
@@ -212,7 +278,11 @@ export function useSurveyResponse() {
   const handleRetry = useCallback(() => {
     setLoading(true);
     setRetriesCount(prev => prev + 1);
-  }, []);
+    toast({
+      title: "Retrying",
+      description: "Attempting to load the survey again...",
+    });
+  }, [toast]);
 
   const handleNavigateHome = useCallback(() => {
     navigate('/brand/dashboard');
