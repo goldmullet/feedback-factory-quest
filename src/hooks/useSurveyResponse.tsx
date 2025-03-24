@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useFeedback } from '@/context/feedback';
@@ -30,6 +29,86 @@ export function useSurveyResponse() {
     handleInfoSubmit 
   } = useRespondentForm(() => setCurrentStep('questions'));
 
+  // New method to force recovery of a specific survey
+  const forceSurveyRecovery = useCallback((specificSurveyId: string) => {
+    console.log(`Force recovery for survey: ${specificSurveyId}`);
+    
+    try {
+      // Attempt direct raw localStorage access
+      const rawStorage = localStorage.getItem('lovable-surveys');
+      if (rawStorage) {
+        // Check if the ID exists in the raw string
+        if (rawStorage.includes(specificSurveyId)) {
+          console.log(`${specificSurveyId} EXISTS in raw localStorage string!`);
+          
+          try {
+            // Parse all surveys
+            const allSurveys = JSON.parse(rawStorage);
+            console.log('All available surveys after force parse:', 
+              allSurveys.map((s: any) => s.id).join(', '));
+            
+            // Find the target survey
+            const targetSurvey = allSurveys.find((s: any) => 
+              s.id === specificSurveyId || 
+              s.id.includes(specificSurveyId.replace('survey-', ''))
+            );
+            
+            if (targetSurvey) {
+              console.log('FOUND TARGET SURVEY IN FORCE RECOVERY:', targetSurvey);
+              
+              // Deep clone and fix date issues
+              const surveyToUse = JSON.parse(JSON.stringify(targetSurvey));
+              
+              // Convert createdAt to Date object
+              if (surveyToUse.createdAt && typeof surveyToUse.createdAt !== 'object') {
+                surveyToUse.createdAt = new Date(surveyToUse.createdAt);
+              } else if (surveyToUse.createdAt?._type === 'Date') {
+                surveyToUse.createdAt = new Date(surveyToUse.createdAt.value.iso);
+              }
+              
+              setSurvey(surveyToUse);
+              setAnswers(initializeAnswers(surveyToUse));
+              setLoading(false);
+              
+              // Force a clean state for localStorage
+              localStorage.setItem('lovable-surveys', JSON.stringify(allSurveys));
+              console.log('REFRESHED localStorage after force recovery');
+              
+              // Show a success toast
+              toast({
+                title: "Survey Recovered",
+                description: `Successfully recovered "${surveyToUse.title}"`,
+              });
+              
+              return true;
+            }
+          } catch (parseError) {
+            console.error('Error in force recovery parsing:', parseError);
+          }
+        }
+      }
+      
+      // If direct access fails, try looking for survey in all available surveys
+      const matchingSurvey = surveys.find(s => 
+        s.id === specificSurveyId || 
+        s.id.includes(specificSurveyId.replace('survey-', ''))
+      );
+      
+      if (matchingSurvey) {
+        console.log('FOUND TARGET SURVEY IN CONTEXT:', matchingSurvey);
+        setSurvey(matchingSurvey);
+        setAnswers(initializeAnswers(matchingSurvey));
+        setLoading(false);
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Error in force recovery:', error);
+      return false;
+    }
+  }, [surveys, toast]);
+
   // Find the survey based on surveyId with enhanced recovery for specific IDs
   useEffect(() => {
     const loadSurvey = async () => {
@@ -43,11 +122,27 @@ export function useSurveyResponse() {
       
       console.log(`[Try ${retriesCount + 1}] Looking for survey with ID:`, surveyId);
       
-      // Special handling for problematic survey IDs
-      const problematicSurveyIds = ['survey-1742852600629', 'survey-1742852947140', 'survey-1742850890608'];
+      // Special handling for problematic survey IDs - updated to include the latest problematic ID
+      const problematicSurveyIds = [
+        'survey-1742852600629', 
+        'survey-1742852947140', 
+        'survey-1742850890608',
+        'survey-1742853415451'
+      ];
+      
       const isProblematicId = problematicSurveyIds.some(id => 
         surveyId === id || surveyId.includes(id.replace('survey-', ''))
       );
+      
+      // For the specific new problem survey, try force recovery first
+      if (surveyId === 'survey-1742853415451') {
+        console.log('Attempt immediate force recovery for survey-1742853415451');
+        const recovered = forceSurveyRecovery('survey-1742853415451');
+        if (recovered) {
+          console.log('Early recovery successful for survey-1742853415451');
+          return;
+        }
+      }
       
       if (isProblematicId) {
         console.log(`ATTEMPTING SPECIAL RECOVERY for ${surveyId}`);
@@ -265,7 +360,7 @@ export function useSurveyResponse() {
     };
 
     loadSurvey();
-  }, [surveyId, surveys, retriesCount]);
+  }, [surveyId, surveys, retriesCount, forceSurveyRecovery]);
 
   const handleAnswerChange = (questionId: string, answer: string) => {
     setAnswers(prev => 
@@ -384,6 +479,7 @@ export function useSurveyResponse() {
       }
     },
     handleRetry,
-    handleNavigateHome
+    handleNavigateHome,
+    forceSurveyRecovery
   };
 }

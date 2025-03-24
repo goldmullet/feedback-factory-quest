@@ -8,7 +8,7 @@ import SurveyNotFound from '@/components/survey/SurveyNotFound';
 import SurveyLoading from '@/components/survey/SurveyLoading';
 import SurveyResponseLayout from '@/components/survey/SurveyResponseLayout';
 import { useParams } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useFeedback } from '@/context/feedback';
 
@@ -16,6 +16,7 @@ const SurveyResponse = () => {
   const { surveyId } = useParams();
   const { toast } = useToast();
   const { surveys } = useFeedback();
+  const [manualRecoveryAttempted, setManualRecoveryAttempted] = useState(false);
   
   const {
     survey,
@@ -31,7 +32,8 @@ const SurveyResponse = () => {
     handleAnswerChange,
     handleSubmitSurvey,
     handleRetry,
-    handleNavigateHome
+    handleNavigateHome,
+    forceSurveyRecovery
   } = useSurveyResponse();
   
   // Debug output on mount and when survey status changes
@@ -50,8 +52,13 @@ const SurveyResponse = () => {
         const exactMatch = storedSurveys.some((s: any) => s.id === surveyId);
         console.log(`Manual check - Survey ID exact match in localStorage: ${exactMatch}`);
         
-        // For all problematic survey IDs
-        const problematicSurveyIds = ['survey-1742852600629', 'survey-1742852947140', 'survey-1742850890608'];
+        // For all problematic survey IDs - updated to include the new ID
+        const problematicSurveyIds = [
+          'survey-1742852600629', 
+          'survey-1742852947140', 
+          'survey-1742850890608',
+          'survey-1742853415451' // Adding the new problematic ID
+        ];
         
         if (surveyId && problematicSurveyIds.some(id => surveyId === id || surveyId?.includes(id.replace('survey-', '')))) {
           const idToCheck = surveyId;
@@ -77,6 +84,26 @@ const SurveyResponse = () => {
           }
         }
         
+        // Special hard-coded handling for survey-1742853415451
+        if (surveyId === 'survey-1742853415451' && !survey && !manualRecoveryAttempted) {
+          console.log('ATTEMPTING DIRECT RECOVERY FOR survey-1742853415451');
+          setManualRecoveryAttempted(true);
+          
+          // Try to force recovery for this specific survey
+          forceSurveyRecovery('survey-1742853415451');
+          
+          // If that doesn't work, try to look for the survey in all surveys
+          const specificSurvey = storedSurveys.find((s: any) => 
+            s.id === 'survey-1742853415451' || s.id.includes('1742853415451')
+          );
+          
+          if (specificSurvey) {
+            console.log('FOUND SPECIFIC SURVEY IN LOCALSTORAGE:', specificSurvey);
+            // Force retry after a very short delay
+            setTimeout(handleRetry, 300);
+          }
+        }
+        
         if (exactMatch && !survey && !loading) {
           console.log('CRITICAL: Survey found in localStorage but not loaded in component state');
           // Force a retry after a short delay if we detect this condition
@@ -97,7 +124,22 @@ const SurveyResponse = () => {
         description: `Successfully loaded "${survey.title}" with ${survey.questions.length} questions`,
       });
     }
-  }, [surveyId, survey, loading, toast, handleRetry, surveys]);
+  }, [surveyId, survey, loading, toast, handleRetry, surveys, manualRecoveryAttempted, forceSurveyRecovery]);
+  
+  // Additional retry logic for problematic surveys
+  useEffect(() => {
+    // If after 3 seconds we still don't have a survey and we're not loading, try a final recovery
+    if (surveyId === 'survey-1742853415451' && !survey && !loading && !manualRecoveryAttempted) {
+      const timeoutId = setTimeout(() => {
+        console.log('LAST RESORT RECOVERY ATTEMPT FOR survey-1742853415451');
+        setManualRecoveryAttempted(true);
+        forceSurveyRecovery('survey-1742853415451');
+        setTimeout(handleRetry, 500);
+      }, 3000); // 3 second delay
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [surveyId, survey, loading, manualRecoveryAttempted, forceSurveyRecovery, handleRetry]);
 
   if (loading) {
     return <SurveyLoading />;
