@@ -1,3 +1,4 @@
+
 export interface Question {
   id: string;
   text: string;
@@ -68,7 +69,7 @@ export interface FeedbackContextType {
   addQuestion: (brandId: string, text: string, description?: string) => void;
   addFeedback: (questionId: string, audioBlob: Blob) => void;
   addSurvey: (brandId: string, title: string, description: string, questions: {text: string, description: string}[]) => string;
-  addSurveyResponse: (surveyId: string, answers: {questionId: string, answer: string}[], respondent?: {name: string, email: string}) => void;
+  addSurveyResponse: (surveyId: string, answers: {questionId: string, answer: string}[], respondent?: {name: string, email: string}, audioBlobs?: {[key: string]: Blob}) => void;
   getCurrentBrand: () => Brand | undefined;
   setCurrentBrandId: (id: string) => void;
 }
