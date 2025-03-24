@@ -20,13 +20,15 @@ const Index = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <HeroSection scrollToFeatures={scrollToFeatures} />
-      <BrandLogos />
-      <HowItWorks forwardedRef={featuresRef} />
-      <UnderstandConsumer />
-      <AutomatedFeedback />
-      <CustomerRewards />
-      <CallToAction />
+      <main>
+        <HeroSection scrollToFeatures={scrollToFeatures} />
+        <BrandLogos />
+        <HowItWorks forwardedRef={featuresRef} />
+        <UnderstandConsumer />
+        <AutomatedFeedback />
+        <CustomerRewards />
+        <CallToAction />
+      </main>
       <Footer />
     </div>
   );
