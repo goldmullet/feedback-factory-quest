@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { FormLabel } from '@/components/ui/form';
+import { Label } from '@/components/ui/label';
 import { Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Question from '@/components/Question';
@@ -90,7 +90,7 @@ const SurveyCreation = ({ open, onOpenChange, onCreateSurvey }: SurveyCreationPr
 
         <div className="space-y-6 py-4">
           <div className="space-y-2">
-            <FormLabel htmlFor="title">Survey Title</FormLabel>
+            <Label htmlFor="title">Survey Title</Label>
             <Input
               id="title"
               placeholder="Enter survey title"
@@ -100,7 +100,7 @@ const SurveyCreation = ({ open, onOpenChange, onCreateSurvey }: SurveyCreationPr
           </div>
 
           <div className="space-y-2">
-            <FormLabel htmlFor="description">Survey Description (Optional)</FormLabel>
+            <Label htmlFor="description">Survey Description (Optional)</Label>
             <Textarea
               id="description"
               placeholder="Enter a brief description about this survey"
@@ -112,7 +112,7 @@ const SurveyCreation = ({ open, onOpenChange, onCreateSurvey }: SurveyCreationPr
 
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <FormLabel>Questions</FormLabel>
+              <Label>Questions</Label>
               <Button 
                 type="button" 
                 variant="outline" 
