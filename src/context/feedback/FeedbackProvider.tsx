@@ -43,7 +43,9 @@ export const FeedbackProvider = ({ children }: { children: ReactNode }) => {
         const parsedSurveys = JSON.parse(storedSurveys);
         return parsedSurveys.map((survey: any) => ({
           ...survey,
-          createdAt: new Date(survey.createdAt)
+          createdAt: survey.createdAt?._type === 'Date' 
+            ? new Date(survey.createdAt.value.iso) 
+            : new Date(survey.createdAt)
         }));
       } catch (error) {
         console.error('Error parsing stored surveys:', error);
@@ -61,7 +63,9 @@ export const FeedbackProvider = ({ children }: { children: ReactNode }) => {
         const parsedResponses = JSON.parse(storedResponses);
         return parsedResponses.map((response: any) => ({
           ...response,
-          createdAt: new Date(response.createdAt)
+          createdAt: response.createdAt?._type === 'Date'
+            ? new Date(response.createdAt.value.iso)
+            : new Date(response.createdAt)
         }));
       } catch (error) {
         console.error('Error parsing stored survey responses:', error);
@@ -71,16 +75,39 @@ export const FeedbackProvider = ({ children }: { children: ReactNode }) => {
     return [];
   });
 
+  // Custom JSON replacer to handle Date objects when saving to localStorage
+  const jsonReplacer = (key: string, value: any) => {
+    if (value instanceof Date) {
+      return {
+        _type: 'Date',
+        value: {
+          iso: value.toISOString(),
+          value: value.valueOf(),
+          local: value.toString()
+        }
+      };
+    }
+    return value;
+  };
+
   // Save surveys to localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem('lovable-surveys', JSON.stringify(surveys));
-    // Log for debugging
-    console.log('Saved surveys to localStorage:', surveys);
+    try {
+      localStorage.setItem('lovable-surveys', JSON.stringify(surveys, jsonReplacer));
+      // Log for debugging
+      console.log('Saved surveys to localStorage:', surveys);
+    } catch (error) {
+      console.error('Error saving surveys to localStorage:', error);
+    }
   }, [surveys]);
 
   // Save survey responses to localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem('lovable-survey-responses', JSON.stringify(surveyResponses));
+    try {
+      localStorage.setItem('lovable-survey-responses', JSON.stringify(surveyResponses, jsonReplacer));
+    } catch (error) {
+      console.error('Error saving survey responses to localStorage:', error);
+    }
   }, [surveyResponses]);
 
   const addBrand = (name: string) => {
