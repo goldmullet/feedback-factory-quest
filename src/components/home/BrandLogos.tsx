@@ -6,7 +6,7 @@ const BrandLogos = () => {
     {
       name: 'Legends',
       logo: '/lovable-uploads/2cde1c68-270f-4ea9-80ca-f4ae21e8f4c9.png',
-      height: 'h-16'
+      height: 'h-20'
     },
     {
       name: 'Brand 2',
@@ -55,7 +55,7 @@ const BrandLogos = () => {
               <img 
                 src={brand.logo} 
                 alt={`${brand.name} logo`} 
-                className="h-full w-auto object-contain opacity-70 hover:opacity-100 transition-opacity"
+                className="h-full w-auto max-w-[200px] object-contain opacity-100 transition-opacity"
               />
             </motion.div>
           ))}
