@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -17,6 +16,7 @@ import Setup from "./pages/Setup";
 import NotFound from "./pages/NotFound";
 import SignIn from "./pages/Auth/SignIn";
 import SignUp from "./pages/Auth/SignUp";
+import SurveyResponse from "./pages/SurveyResponse";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +30,7 @@ const AnimatedRoutes = () => {
         <Route path="/" element={<Index />} />
         <Route path="/auth/signin" element={<SignIn />} />
         <Route path="/auth/signup" element={<SignUp />} />
+        <Route path="/survey/:surveyId" element={<SurveyResponse />} />
         
         {/* Protected routes */}
         <Route path="/brand/dashboard" element={
@@ -48,11 +49,6 @@ const AnimatedRoutes = () => {
           </ProtectedRoute>
         } />
         <Route path="/consumer/:questionId" element={
-          <ProtectedRoute>
-            <ConsumerFeedback />
-          </ProtectedRoute>
-        } />
-        <Route path="/survey/:surveyId" element={
           <ProtectedRoute>
             <ConsumerFeedback />
           </ProtectedRoute>

@@ -40,6 +40,10 @@ interface SurveyResponse {
     questionId: string;
     answer: string;
   }[];
+  respondent?: {
+    name: string;
+    email: string;
+  };
   createdAt: Date;
 }
 
@@ -60,7 +64,7 @@ interface FeedbackContextType {
   addQuestion: (brandId: string, text: string, description?: string) => void;
   addFeedback: (questionId: string, audioBlob: Blob) => void;
   addSurvey: (brandId: string, title: string, description: string, questions: {text: string, description: string}[]) => string;
-  addSurveyResponse: (surveyId: string, answers: {questionId: string, answer: string}[]) => void;
+  addSurveyResponse: (surveyId: string, answers: {questionId: string, answer: string}[], respondent?: {name: string, email: string}) => void;
   getCurrentBrand: () => Brand | undefined;
   setCurrentBrandId: (id: string) => void;
 }
@@ -184,15 +188,31 @@ export const FeedbackProvider = ({ children }: { children: ReactNode }) => {
     return surveyId;
   };
 
-  const addSurveyResponse = (surveyId: string, answers: {questionId: string, answer: string}[]) => {
+  const addSurveyResponse = (surveyId: string, answers: {questionId: string, answer: string}[], respondent?: {name: string, email: string}) => {
     const newResponse: SurveyResponse = {
       id: `response-${Date.now()}`,
       surveyId,
       answers,
+      respondent,
       createdAt: new Date()
     };
     
     setSurveyResponses(prev => [...prev, newResponse]);
+    
+    // If there's a respondent with email, we could award store credit to the brand
+    // This is a mock implementation - in a real app, you'd have a more sophisticated system
+    if (respondent && respondent.email) {
+      const survey = surveys.find(s => s.id === surveyId);
+      if (survey) {
+        setBrands(prev => 
+          prev.map(brand => 
+            brand.id === survey.brandId 
+              ? { ...brand, storeCredit: brand.storeCredit + 10 } // Award 10 credits per response
+              : brand
+          )
+        );
+      }
+    }
   };
 
   const getCurrentBrand = () => {

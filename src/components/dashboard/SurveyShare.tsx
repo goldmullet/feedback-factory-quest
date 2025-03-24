@@ -2,7 +2,7 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { CheckCircle, ClipboardCopy } from 'lucide-react';
+import { CheckCircle, ClipboardCopy, UserCircle, Mail, Gift } from 'lucide-react';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -47,10 +47,46 @@ const SurveyShare = ({ open, onOpenChange, surveyLink }: ShareSurveyProps) => {
           </Button>
         </div>
         
-        <div className="mt-4 p-4 bg-muted rounded-md">
-          <p className="text-sm text-muted-foreground">
-            Share this link with your customers to collect their feedback. Responses will appear on your dashboard automatically.
-          </p>
+        <div className="mt-4 space-y-3">
+          <h3 className="text-sm font-medium">What happens when someone opens this link?</h3>
+          
+          <div className="space-y-2">
+            <div className="flex items-start gap-2">
+              <div className="bg-primary/10 rounded-full p-1.5 mt-0.5">
+                <ClipboardCopy className="h-3.5 w-3.5 text-primary" />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                They'll see your survey introduction and questions
+              </p>
+            </div>
+            
+            <div className="flex items-start gap-2">
+              <div className="bg-primary/10 rounded-full p-1.5 mt-0.5">
+                <UserCircle className="h-3.5 w-3.5 text-primary" />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                They'll provide their name and email for identification
+              </p>
+            </div>
+            
+            <div className="flex items-start gap-2">
+              <div className="bg-primary/10 rounded-full p-1.5 mt-0.5">
+                <Mail className="h-3.5 w-3.5 text-primary" />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                They'll submit feedback to your questions
+              </p>
+            </div>
+            
+            <div className="flex items-start gap-2">
+              <div className="bg-primary/10 rounded-full p-1.5 mt-0.5">
+                <Gift className="h-3.5 w-3.5 text-primary" />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                They'll earn store credit for completing the survey
+              </p>
+            </div>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
