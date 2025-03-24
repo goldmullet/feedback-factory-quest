@@ -1,4 +1,5 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useFeedback } from '@/context/feedback';
 import { useSurveyResponse } from '@/hooks/survey/useSurveyResponse';
