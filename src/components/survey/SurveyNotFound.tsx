@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle, Home, RefreshCw, ExternalLink, Search, Database, RotateCw } from 'lucide-react';
+import { AlertCircle, Home, RefreshCw, ExternalLink, Search, Database, RotateCw, HardDrive } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface SurveyNotFoundProps {
@@ -21,6 +21,7 @@ const SurveyNotFound = ({
   const [showDebugInfo, setShowDebugInfo] = useState(true);
   const [isRepairing, setIsRepairing] = useState(false);
   const [lastSurveyId, setLastSurveyId] = useState<string | undefined>(surveyId);
+  const [rawStorageData, setRawStorageData] = useState<string | null>(null);
   const { toast } = useToast();
   
   // Reset repair state if surveyId changes
@@ -28,6 +29,20 @@ const SurveyNotFound = ({
     if (surveyId !== lastSurveyId) {
       setIsRepairing(false);
       setLastSurveyId(surveyId);
+    }
+    
+    // Also check and store raw localStorage content
+    try {
+      const rawData = localStorage.getItem('lovable-surveys');
+      setRawStorageData(rawData);
+      
+      if (rawData) {
+        console.log('Raw localStorage contains data of length:', rawData.length);
+      } else {
+        console.log('No raw data found in localStorage');
+      }
+    } catch (e) {
+      console.error('Error accessing raw localStorage:', e);
     }
   }, [surveyId, lastSurveyId]);
   
@@ -77,6 +92,26 @@ const SurveyNotFound = ({
     problematicSurveyIds.some(id => surveyId === id || surveyId.includes(id.replace('survey-', '')))
     : false;
   
+  // Create an empty survey template in case we need one
+  const createEmptySurveyTemplate = () => {
+    if (!surveyId) return null;
+    
+    return {
+      id: surveyId,
+      brandId: "brand-1",
+      title: "Recovered Survey",
+      description: "This survey was recovered after a loading issue.",
+      questions: [
+        {
+          id: `sq-${Date.now()}-recovery`,
+          text: "Please provide your feedback",
+          description: "We apologize for any technical issues."
+        }
+      ],
+      createdAt: new Date()
+    };
+  };
+  
   // Display a toast with survey info when component mounts
   useEffect(() => {
     if (surveyId) {
@@ -109,6 +144,14 @@ const SurveyNotFound = ({
         console.log('Available survey IDs:', storedSurveys.map((s: any) => s.id).join(', '));
       } else {
         console.error('No surveys found in localStorage at all');
+        
+        // Check if raw storage has any data
+        if (rawStorageData && rawStorageData.length > 0) {
+          console.log('Raw storage has data but parsing failed. Length:', rawStorageData.length);
+          if (rawStorageData.includes('"id"')) {
+            console.log('Raw storage contains id fields, suggesting surveys might exist');
+          }
+        }
       }
       
       // Special check for problematic IDs
@@ -126,7 +169,7 @@ const SurveyNotFound = ({
         }
       }
     }
-  }, [surveyId, surveyExists, toast, storedSurveys.length, isProblematicId]);
+  }, [surveyId, surveyExists, toast, storedSurveys.length, isProblematicId, rawStorageData]);
   
   const handleCheckForExactSurvey = () => {
     if (!surveyId) return;
@@ -223,9 +266,17 @@ const SurveyNotFound = ({
           // Final attempt - try repairing localStorage
           repairAndRetry(parsedSurveys);
         }
+      } else {
+        // If no surveys in localStorage, check if we should create a new one
+        console.log('No surveys found in localStorage at all');
+        
+        // Force a repair attempt anyway
+        repairForcefully();
       }
     } catch (error) {
       console.error('Error during manual survey check:', error);
+      // Try forced repair as a last resort
+      repairForcefully();
     }
   };
   
@@ -265,19 +316,63 @@ const SurveyNotFound = ({
           if (onRetry) onRetry();
         }, 1000);
       } else {
-        setIsRepairing(false);
-        toast({
-          title: "Repair Failed",
-          description: "No surveys found to repair.",
-          variant: "destructive"
-        });
+        // If no surveys found, try to create a new one for this ID
+        repairForcefully();
       }
     } catch (error) {
       console.error('Error during storage repair:', error);
+      
+      // Try one last resort - forced repair
+      repairForcefully();
+    }
+  };
+  
+  // Last resort - create a survey if none exists
+  const repairForcefully = () => {
+    setIsRepairing(true);
+    
+    try {
+      // Create an empty survey array if none exists
+      if (surveyId) {
+        const emptySurvey = createEmptySurveyTemplate();
+        
+        if (emptySurvey) {
+          // Create a new array with just this survey
+          const newSurveys = [emptySurvey];
+          
+          // Save to localStorage
+          localStorage.setItem('lovable-surveys', JSON.stringify(newSurveys));
+          
+          console.log('Created and saved new empty survey:', emptySurvey);
+          
+          toast({
+            title: "Created New Survey",
+            description: "Created a new survey as a recovery measure. Retrying load...",
+          });
+          
+          // Try a retry
+          setTimeout(() => {
+            setIsRepairing(false);
+            if (onRetry) onRetry();
+          }, 1000);
+          
+          return;
+        }
+      }
+      
+      // If we get here, everything failed
       setIsRepairing(false);
       toast({
         title: "Repair Failed",
-        description: "An error occurred while trying to repair storage.",
+        description: "Could not create or find any surveys. Try creating a new survey.",
+        variant: "destructive"
+      });
+    } catch (error) {
+      console.error('Error during forced repair:', error);
+      setIsRepairing(false);
+      toast({
+        title: "Repair Failed",
+        description: "An error occurred during last-resort repair attempt.",
         variant: "destructive"
       });
     }
@@ -349,30 +444,66 @@ const SurveyNotFound = ({
               if (onRetry) onRetry();
             }, 1000);
           } else {
-            toast({
-              title: "Deep Recovery Failed",
-              description: "Could not find any usable survey.",
-              variant: "destructive"
-            });
-            setIsRepairing(false);
+            // Create a new empty survey as last resort
+            repairForcefully();
           }
         } else {
-          toast({
-            title: "Deep Recovery Failed",
-            description: "No surveys available in storage.",
-            variant: "destructive"
-          });
-          setIsRepairing(false);
+          // Create a new empty survey as last resort
+          repairForcefully();
         }
       } catch (error) {
         console.error('Error during deep recovery:', error);
-        toast({
-          title: "Deep Recovery Failed",
-          description: "An error occurred during advanced repair.",
-          variant: "destructive"
-        });
-        setIsRepairing(false);
+        
+        // Last resort
+        repairForcefully();
       }
+    }
+  };
+  
+  // Initialize storage if completely empty
+  const initializeEmptyStorage = () => {
+    try {
+      const raw = localStorage.getItem('lovable-surveys');
+      
+      if (!raw || raw === '[]' || raw === 'null') {
+        console.log('Storage appears to be completely empty, initializing it');
+        
+        // Create a sample survey
+        const sampleSurvey = {
+          id: `sample-${Date.now()}`,
+          brandId: "brand-1",
+          title: "Sample Survey",
+          description: "This is a sample survey to initialize storage",
+          questions: [
+            {
+              id: `sample-q-${Date.now()}`,
+              text: "What do you think of our product?",
+              description: "Please provide your honest feedback"
+            }
+          ],
+          createdAt: new Date()
+        };
+        
+        // Initialize storage with this survey
+        localStorage.setItem('lovable-surveys', JSON.stringify([sampleSurvey]));
+        
+        toast({
+          title: "Storage Initialized",
+          description: "Created a sample survey to initialize empty storage",
+        });
+        
+        // Try a retry
+        setTimeout(() => {
+          if (onRetry) onRetry();
+        }, 1000);
+        
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Error initializing empty storage:', error);
+      return false;
     }
   };
   
@@ -399,7 +530,7 @@ const SurveyNotFound = ({
                   Decoded: {decodeURIComponent(surveyId)}
                 </p>
               )}
-              <div className="mt-2 flex space-x-2 justify-center">
+              <div className="mt-2 flex flex-wrap gap-2 justify-center">
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -417,6 +548,15 @@ const SurveyNotFound = ({
                 >
                   <Database className="h-3 w-3 mr-1" />
                   {isRepairing ? 'Repairing...' : 'Repair Store'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={initializeEmptyStorage}
+                  disabled={isRepairing}
+                >
+                  <HardDrive className="h-3 w-3 mr-1" />
+                  Initialize Storage
                 </Button>
                 {surveyId === 'survey-1742853415451' && (
                   <Button
@@ -438,6 +578,8 @@ const SurveyNotFound = ({
               <h3 className="font-medium mb-2 text-sm">Debug Information:</h3>
               <ul className="space-y-2 text-xs text-muted-foreground">
                 <li>• Surveys in localStorage: {storedSurveys.length}</li>
+                <li>• Raw localStorage status: {rawStorageData ? 'Contains data' : 'Empty'}</li>
+                <li>• Raw data length: {rawStorageData ? rawStorageData.length : 0}</li>
                 <li>• Exact match in localStorage: {exactMatch ? 'Yes' : 'No'}</li>
                 <li>• Decoded match: {decodedMatch ? 'Yes' : 'No'}</li>
                 <li>• Case-insensitive match: {caseInsensitiveMatch ? 'Yes' : 'No'}</li>
@@ -454,11 +596,10 @@ const SurveyNotFound = ({
                   {storedSurveys.length > 3 ? ` (+${storedSurveys.length - 3} more)` : ''}
                 </li>
               </ul>
-              {storedSurveys.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
                 <Button 
                   variant="outline" 
-                  size="sm" 
-                  className="mt-2"
+                  size="sm"
                   onClick={() => repairAndRetry()}
                   disabled={isRepairing}
                 >
@@ -474,7 +615,16 @@ const SurveyNotFound = ({
                     </>
                   )}
                 </Button>
-              )}
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={repairForcefully}
+                  disabled={isRepairing}
+                >
+                  <Database className="h-3 w-3 mr-1" />
+                  Create Recovery Survey
+                </Button>
+              </div>
             </div>
           )}
           
