@@ -12,6 +12,7 @@ import CallToAction from '@/components/home/CallToAction';
 
 const Index = () => {
   const featuresRef = useRef<HTMLDivElement>(null);
+  const howItWorksRef = useRef<HTMLDivElement>(null);
 
   const scrollToFeatures = () => {
     featuresRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -23,10 +24,14 @@ const Index = () => {
       <main>
         <HeroSection scrollToFeatures={scrollToFeatures} />
         <BrandLogos />
-        <HowItWorks forwardedRef={featuresRef} />
-        <UnderstandConsumer />
-        <AutomatedFeedback />
-        <CustomerRewards />
+        <div id="how-it-works">
+          <HowItWorks forwardedRef={howItWorksRef} />
+        </div>
+        <div id="features">
+          <UnderstandConsumer forwardedRef={featuresRef} />
+          <AutomatedFeedback />
+          <CustomerRewards />
+        </div>
         <CallToAction />
       </main>
       <Footer />
