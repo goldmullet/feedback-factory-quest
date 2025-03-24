@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useFeedback } from '@/context/feedback';
@@ -30,9 +29,13 @@ const SurveyResponse = () => {
   // Find the survey based on surveyId
   useEffect(() => {
     if (surveyId) {
+      console.log('Looking for survey with ID:', surveyId);
+      console.log('Available surveys:', surveys);
+      
       const foundSurvey = surveys.find(s => s.id === surveyId);
       
       if (foundSurvey) {
+        console.log('Survey found:', foundSurvey);
         setSurvey(foundSurvey);
         // Initialize answers array with empty answers for each question
         setAnswers(
@@ -41,6 +44,8 @@ const SurveyResponse = () => {
             answer: ''
           }))
         );
+      } else {
+        console.error('Survey not found with ID:', surveyId);
       }
       
       setLoading(false);
@@ -98,7 +103,7 @@ const SurveyResponse = () => {
     
     // Submit the survey response
     try {
-      addSurveyResponse(survey.id, answers);
+      addSurveyResponse(survey.id, answers, respondentInfo);
       
       // Show success and move to thank you screen
       setCurrentStep('thank-you');

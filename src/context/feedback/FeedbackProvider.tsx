@@ -32,17 +32,53 @@ export const FeedbackProvider = ({ children }: { children: ReactNode }) => {
   ]);
   
   const [feedback, setFeedback] = useState<Feedback[]>([]);
-  const [surveyResponses, setSurveyResponses] = useState<SurveyResponse[]>([]);
   const [currentBrandId, setCurrentBrandId] = useState<string>('brand-1');
 
   const [surveys, setSurveys] = useState<Survey[]>(() => {
     const storedSurveys = localStorage.getItem('lovable-surveys');
-    return storedSurveys ? JSON.parse(storedSurveys) : [];
+    if (storedSurveys) {
+      try {
+        // Parse stored surveys and convert createdAt strings back to Date objects
+        const parsedSurveys = JSON.parse(storedSurveys);
+        return parsedSurveys.map((survey: any) => ({
+          ...survey,
+          createdAt: new Date(survey.createdAt)
+        }));
+      } catch (error) {
+        console.error('Error parsing stored surveys:', error);
+        return [];
+      }
+    }
+    return [];
   });
 
+  const [surveyResponses, setSurveyResponses] = useState<SurveyResponse[]>(() => {
+    const storedResponses = localStorage.getItem('lovable-survey-responses');
+    if (storedResponses) {
+      try {
+        // Parse stored responses and convert createdAt strings back to Date objects
+        const parsedResponses = JSON.parse(storedResponses);
+        return parsedResponses.map((response: any) => ({
+          ...response,
+          createdAt: new Date(response.createdAt)
+        }));
+      } catch (error) {
+        console.error('Error parsing stored survey responses:', error);
+        return [];
+      }
+    }
+    return [];
+  });
+
+  // Save surveys to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem('lovable-surveys', JSON.stringify(surveys));
   }, [surveys]);
+
+  // Save survey responses to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('lovable-survey-responses', JSON.stringify(surveyResponses));
+  }, [surveyResponses]);
 
   const addBrand = (name: string) => {
     const newBrand = createBrand(name);

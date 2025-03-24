@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -28,6 +27,9 @@ const BrandDashboard = () => {
   const handleCreateSurvey = (title: string, description: string, questions: {text: string, description: string}[]) => {
     const surveyId = addSurvey(currentBrand?.id || '', title, description, questions);
     setShowNewSurveyDialog(false);
+    
+    // Log confirmation of survey creation
+    console.log(`Survey created with ID: ${surveyId}`);
   };
 
   const handleShareSurvey = (surveyId: string) => {
@@ -35,6 +37,10 @@ const BrandDashboard = () => {
     const shareableLink = `${window.location.origin}/survey/${surveyId}`;
     setCurrentSurveyShare(shareableLink);
     setShowShareDialog(true);
+    
+    // Log the survey sharing for debugging
+    console.log(`Sharing survey with ID: ${surveyId}`);
+    console.log(`Shareable link: ${shareableLink}`);
   };
 
   return (
