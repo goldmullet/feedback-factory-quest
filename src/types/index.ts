@@ -1,4 +1,3 @@
-
 export interface Question {
   id: string;
   text: string;
@@ -16,8 +15,12 @@ export interface Survey {
   id: string;
   brandId: string;
   title: string;
-  description?: string;
-  questions: SurveyQuestion[];
+  description: string;
+  questions: {
+    id: string;
+    text: string;
+    description: string;
+  }[];
   createdAt: Date;
 }
 
@@ -26,9 +29,9 @@ export interface Feedback {
   questionId: string;
   audioBlob: Blob;
   audioUrl: string;
+  createdAt: Date;
   transcription?: string;
   insights?: string[];
-  createdAt: Date;
 }
 
 export interface SurveyResponse {
@@ -41,6 +44,9 @@ export interface SurveyResponse {
   respondent?: {
     name: string;
     email: string;
+  };
+  audioUrls?: {
+    [key: string]: string;
   };
   createdAt: Date;
 }

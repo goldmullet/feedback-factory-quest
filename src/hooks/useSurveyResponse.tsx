@@ -18,8 +18,10 @@ export function useSurveyResponse() {
   const [loading, setLoading] = useState(true);
   const [currentStep, setCurrentStep] = useState<SurveyStep>('intro');
   const [answers, setAnswers] = useState<{questionId: string, answer: string}[]>([]);
+  const [audioBlobs, setAudioBlobs] = useState<{[key: string]: Blob}>({});
   const [retriesCount, setRetriesCount] = useState(0);
   const [directLocalStorageCheck, setDirectLocalStorageCheck] = useState(false);
+  const [manualRecoveryAttempted, setManualRecoveryAttempted] = useState(false);
   
   // Initialize the form handling
   const { 
@@ -410,6 +412,16 @@ export function useSurveyResponse() {
     );
   };
 
+  const handleAudioRecorded = (questionId: string, blob: Blob) => {
+    setAudioBlobs(prev => ({
+      ...prev,
+      [questionId]: blob
+    }));
+    
+    // Also update text answers with a placeholder
+    handleAnswerChange(questionId, "[Audio response recorded]");
+  };
+
   const handleSubmitSurvey = (respondentInfo: RespondentInfo) => {
     // Validate responses
     if (!validateSurveyResponse(answers, toast)) {
@@ -419,7 +431,8 @@ export function useSurveyResponse() {
     // Submit the survey response
     try {
       if (survey) {
-        addSurveyResponse(survey.id, answers, respondentInfo);
+        // Pass audio blobs along with text answers
+        addSurveyResponse(survey.id, answers, respondentInfo, audioBlobs);
         
         // Show success and move to thank you screen
         toast({
@@ -477,51 +490,17 @@ export function useSurveyResponse() {
     loading,
     currentStep,
     answers,
+    audioBlobs,
     formErrors,
     respondentInfo,
     setRespondentInfo,
     directLocalStorageCheck,
     setCurrentStep,
     handleInfoSubmit,
-    handleAnswerChange: (questionId: string, answer: string) => {
-      setAnswers(prev => 
-        prev.map(a => 
-          a.questionId === questionId 
-            ? { ...a, answer } 
-            : a
-        )
-      );
-    },
-    handleSubmitSurvey: (respondentInfo: RespondentInfo) => {
-      // Validate responses
-      if (!validateSurveyResponse(answers, toast)) {
-        return;
-      }
-      
-      // Submit the survey response
-      try {
-        if (survey) {
-          addSurveyResponse(survey.id, answers, respondentInfo);
-          
-          // Show success and move to thank you screen
-          toast({
-            title: "Success",
-            description: "Your feedback has been submitted successfully.",
-          });
-          
-          setCurrentStep('thank-you');
-        } else {
-          throw new Error("Survey not found");
-        }
-      } catch (error) {
-        console.error("Error submitting survey response:", error);
-        toast({
-          title: "Error",
-          description: "There was a problem submitting your response. Please try again.",
-          variant: "destructive"
-        });
-      }
-    },
+    handleAnswerChange,
+    handleAudioRecorded,
+    setAudioBlobs,
+    handleSubmitSurvey,
     handleRetry,
     handleNavigateHome,
     forceSurveyRecovery

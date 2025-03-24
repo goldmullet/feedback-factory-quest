@@ -145,8 +145,13 @@ export const FeedbackProvider = ({ children }: { children: ReactNode }) => {
     return newSurvey.id;
   };
 
-  const addSurveyResponse = (surveyId: string, answers: {questionId: string, answer: string}[], respondent?: {name: string, email: string}) => {
-    const newResponse = createSurveyResponse(surveyId, answers, respondent);
+  const addSurveyResponse = (
+    surveyId: string, 
+    answers: {questionId: string, answer: string}[], 
+    respondent?: {name: string, email: string},
+    audioBlobs?: {[key: string]: Blob}
+  ) => {
+    const newResponse = createSurveyResponse(surveyId, answers, respondent, audioBlobs);
     setSurveyResponses(prev => [...prev, newResponse]);
     
     if (respondent && respondent.email) {
