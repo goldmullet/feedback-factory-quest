@@ -1,5 +1,10 @@
-
+import { useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { useFeedback } from '@/context/feedback';
 import { useSurveyResponse } from '@/hooks/survey/useSurveyResponse';
+import { useSurveyDebugger } from '@/hooks/survey/useSurveyDebugger';
+
+// Survey step components
 import SurveyIntro from '@/components/survey/SurveyIntro';
 import SurveyRespondentForm from '@/components/survey/SurveyRespondentForm';
 import SurveyQuestions from '@/components/survey/SurveyQuestions';
@@ -7,9 +12,7 @@ import SurveyThankYou from '@/components/survey/SurveyThankYou';
 import SurveyNotFound from '@/components/survey/SurveyNotFound';
 import SurveyLoading from '@/components/survey/SurveyLoading';
 import SurveyResponseLayout from '@/components/survey/SurveyResponseLayout';
-import { useParams } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import { useFeedback } from '@/context/feedback';
+import AudioBlobsInitializer from '@/components/survey/AudioBlobsInitializer';
 
 // Add audioBlobs to the global Window interface
 declare global {
