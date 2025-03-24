@@ -36,63 +36,62 @@ const SurveyResponse = () => {
     }
 
     console.log('Looking for survey with ID:', surveyId);
-    console.log('Available surveys:', surveys.length, JSON.stringify(surveys.map(s => ({id: s.id, title: s.title})), null, 2));
+    console.log('Available surveys in context:', surveys.length);
     
-    // Check if surveys array is empty
-    if (surveys.length === 0) {
-      console.error('No surveys available in the context');
+    // First, try to find the survey in the context
+    let foundSurvey = surveys.find(s => s.id === surveyId);
+    
+    if (foundSurvey) {
+      console.log('Survey found in context:', foundSurvey);
+      setSurvey(foundSurvey);
+      initializeAnswers(foundSurvey);
       setLoading(false);
       return;
     }
     
-    // Directly check local storage as a fallback
-    const storedSurveys = localStorage.getItem('lovable-surveys');
-    console.log('Raw stored surveys from localStorage:', storedSurveys);
-    
-    let foundSurvey = surveys.find(s => s.id === surveyId);
-    
-    // If not found in context, try to find in localStorage
-    if (!foundSurvey && storedSurveys) {
-      try {
-        const parsedSurveys = JSON.parse(storedSurveys);
-        console.log('Parsed surveys from localStorage:', parsedSurveys);
+    // If not found in context, try to find in localStorage directly
+    console.log('Survey not found in context, checking localStorage...');
+    try {
+      const storedSurveysRaw = localStorage.getItem('lovable-surveys');
+      if (storedSurveysRaw) {
+        const storedSurveys = JSON.parse(storedSurveysRaw);
+        console.log('Raw stored surveys from localStorage:', storedSurveysRaw.substring(0, 200) + '...');
         
-        const localStorageSurvey = parsedSurveys.find((s: any) => s.id === surveyId);
+        const localStorageSurvey = storedSurveys.find((s: any) => s.id === surveyId);
         
         if (localStorageSurvey) {
           console.log('Survey found in localStorage:', localStorageSurvey);
-          // Convert createdAt back to Date object if needed
+          // Convert createdAt to Date object if needed
           if (localStorageSurvey.createdAt && typeof localStorageSurvey.createdAt !== 'object') {
             localStorageSurvey.createdAt = new Date(localStorageSurvey.createdAt);
           } else if (localStorageSurvey.createdAt?._type === 'Date') {
             localStorageSurvey.createdAt = new Date(localStorageSurvey.createdAt.value.iso);
           }
           
-          foundSurvey = localStorageSurvey;
+          setSurvey(localStorageSurvey);
+          initializeAnswers(localStorageSurvey);
+        } else {
+          console.error('Survey not found in localStorage with ID:', surveyId);
+          console.log('Available survey IDs in localStorage:', storedSurveys.map((s: any) => s.id).join(', '));
         }
-      } catch (error) {
-        console.error('Error parsing stored surveys:', error);
+      } else {
+        console.error('No surveys found in localStorage');
       }
-    }
-    
-    if (foundSurvey) {
-      console.log('Survey found:', foundSurvey);
-      setSurvey(foundSurvey);
-      // Initialize answers array with empty answers for each question
-      setAnswers(
-        foundSurvey.questions.map(q => ({
-          questionId: q.id,
-          answer: ''
-        }))
-      );
-    } else {
-      console.error('Survey not found with ID:', surveyId);
-      // Add more debug information
-      console.log('Survey IDs in system:', surveys.map(s => s.id));
+    } catch (error) {
+      console.error('Error parsing stored surveys:', error);
     }
     
     setLoading(false);
   }, [surveyId, surveys]);
+
+  const initializeAnswers = (surveyData: Survey) => {
+    setAnswers(
+      surveyData.questions.map(q => ({
+        questionId: q.id,
+        answer: ''
+      }))
+    );
+  };
 
   const handleInfoSubmit = (info: {name: string, email: string}, errors: {[key: string]: string}) => {
     if (Object.keys(errors).length > 0) {
@@ -146,12 +145,22 @@ const SurveyResponse = () => {
     }
   };
 
+  const handleRetry = () => {
+    setLoading(true);
+    // Force re-fetch of survey data
+    window.location.reload();
+  };
+
   if (loading) {
     return <SurveyLoading />;
   }
 
   if (!survey) {
-    return <SurveyNotFound onNavigateHome={() => navigate('/')} />;
+    return <SurveyNotFound 
+      onNavigateHome={() => navigate('/')} 
+      surveyId={surveyId}
+      onRetry={handleRetry}
+    />;
   }
 
   return (
