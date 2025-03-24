@@ -36,6 +36,24 @@ const SurveyResponse = () => {
     console.log(`SurveyResponse rendered - Survey ID from URL: ${surveyId}`);
     console.log(`Survey loaded: ${!!survey}, Loading: ${loading}`);
     
+    // Manually check if the survey is in localStorage
+    try {
+      const storedSurveysRaw = localStorage.getItem('lovable-surveys');
+      if (storedSurveysRaw) {
+        const storedSurveys = JSON.parse(storedSurveysRaw);
+        const exactMatch = storedSurveys.some((s: any) => s.id === surveyId);
+        console.log(`Manual check - Survey ID exact match in localStorage: ${exactMatch}`);
+        
+        if (exactMatch && !survey && !loading) {
+          console.log('CRITICAL: Survey found in localStorage but not loaded in component state');
+          // Force a retry after a short delay if we detect this condition
+          setTimeout(handleRetry, 500);
+        }
+      }
+    } catch (error) {
+      console.error('Error in manual localStorage check:', error);
+    }
+    
     if (survey) {
       console.log('Successfully loaded survey:', survey.title);
       // Notify with toast for successful load
@@ -44,7 +62,7 @@ const SurveyResponse = () => {
         description: `Successfully loaded "${survey.title}" with ${survey.questions.length} questions`,
       });
     }
-  }, [surveyId, survey, loading, toast]);
+  }, [surveyId, survey, loading, toast, handleRetry]);
 
   if (loading) {
     return <SurveyLoading />;

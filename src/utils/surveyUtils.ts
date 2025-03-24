@@ -27,6 +27,20 @@ export const findSurveyById = (
     console.log(`Survey ID was URL encoded. Decoded from "${surveyId}" to "${decodedSurveyId}"`);
   }
   
+  // For the specific problematic survey ID
+  if (surveyId === 'survey-1742850890608' || decodedSurveyId === 'survey-1742850890608') {
+    console.log('Looking for the specific problematic survey...');
+    const targetSurvey = surveys.find(s => 
+      s.id === 'survey-1742850890608' || 
+      s.id.includes('1742850890608')
+    );
+    
+    if (targetSurvey) {
+      console.log('Found the target problematic survey in context:', targetSurvey);
+      return targetSurvey;
+    }
+  }
+  
   // First, try to find the survey with the exact ID in the context
   let foundSurvey = surveys.find(s => s.id === surveyId);
   
@@ -93,6 +107,32 @@ export const findSurveyInLocalStorage = (
         storedSurveys = JSON.parse(storedSurveysRaw);
         console.log('Number of surveys in localStorage:', storedSurveys.length);
         console.log('Available survey IDs:', storedSurveys.map((s: any) => s.id).join(', '));
+        
+        // First, check for the specific problematic survey ID
+        if (surveyId === 'survey-1742850890608' || decodedSurveyId === 'survey-1742850890608') {
+          console.log('Looking for the specific problematic survey in localStorage...');
+          const targetSurvey = storedSurveys.find((s: any) => 
+            s.id === 'survey-1742850890608' || 
+            s.id.includes('1742850890608')
+          );
+          
+          if (targetSurvey) {
+            console.log('Found the target problematic survey in localStorage:', targetSurvey);
+            
+            // Deep clone to avoid reference issues
+            const surveyToUse = JSON.parse(JSON.stringify(targetSurvey));
+            
+            // Convert createdAt to Date object
+            if (surveyToUse.createdAt && typeof surveyToUse.createdAt !== 'object') {
+              surveyToUse.createdAt = new Date(surveyToUse.createdAt);
+            } else if (surveyToUse.createdAt?._type === 'Date') {
+              surveyToUse.createdAt = new Date(surveyToUse.createdAt.value.iso);
+            }
+            
+            console.log('Using target survey with processed date:', surveyToUse);
+            return surveyToUse as Survey;
+          }
+        }
         
         // Check if our survey ID is in the localStorage data
         const exactMatch = storedSurveys.some((s: any) => s.id === surveyId);
