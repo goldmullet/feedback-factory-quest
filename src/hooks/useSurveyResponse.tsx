@@ -23,7 +23,6 @@ export function useSurveyResponse() {
   const [directLocalStorageCheck, setDirectLocalStorageCheck] = useState(false);
   const [manualRecoveryAttempted, setManualRecoveryAttempted] = useState(false);
   
-  // Initialize the form handling
   const { 
     respondentInfo, 
     setRespondentInfo,
@@ -31,31 +30,26 @@ export function useSurveyResponse() {
     handleInfoSubmit 
   } = useRespondentForm(() => setCurrentStep('questions'));
 
-  // New method to force recovery of a specific survey, with silent option
   const forceSurveyRecovery = useCallback((specificSurveyId: string, silent: boolean = false) => {
     if (process.env.NODE_ENV === 'development') {
       console.log(`Force recovery for survey: ${specificSurveyId}, silent: ${silent}`);
     }
     
     try {
-      // Attempt direct raw localStorage access
       const rawStorage = localStorage.getItem('lovable-surveys');
       if (rawStorage) {
-        // Check if the ID exists in the raw string
         if (rawStorage.includes(specificSurveyId)) {
           if (process.env.NODE_ENV === 'development') {
             console.log(`${specificSurveyId} EXISTS in raw localStorage string!`);
           }
           
           try {
-            // Parse all surveys
             const allSurveys = JSON.parse(rawStorage);
             if (process.env.NODE_ENV === 'development') {
               console.log('All available surveys after force parse:', 
                 allSurveys.map((s: any) => s.id).join(', '));
             }
             
-            // Find the target survey
             const targetSurvey = allSurveys.find((s: any) => 
               s.id === specificSurveyId || 
               s.id.includes(specificSurveyId.replace('survey-', ''))
@@ -66,16 +60,13 @@ export function useSurveyResponse() {
                 console.log('FOUND TARGET SURVEY IN FORCE RECOVERY:', targetSurvey);
               }
               
-              // Deep clone and fix date issues
               const surveyToUse = JSON.parse(JSON.stringify(targetSurvey));
               
-              // Convert createdAt to Date object
               if (surveyToUse.createdAt && typeof surveyToUse.createdAt !== 'object') {
                 surveyToUse.createdAt = new Date(surveyToUse.createdAt);
               } else if (surveyToUse.createdAt?._type === 'Date') {
                 surveyToUse.createdAt = new Date(surveyToUse.createdAt.value.iso);
               } else if (surveyToUse.createdAt === undefined && surveyToUse.createdAt) {
-                // Handle typo in key name (createdAt vs createdAt)
                 surveyToUse.createdAt = new Date(surveyToUse.createdAt);
                 delete surveyToUse.createdAt;
               }
@@ -84,13 +75,11 @@ export function useSurveyResponse() {
               setAnswers(initializeAnswers(surveyToUse));
               setLoading(false);
               
-              // Force a clean state for localStorage
               localStorage.setItem('lovable-surveys', JSON.stringify(allSurveys));
               if (process.env.NODE_ENV === 'development') {
                 console.log('REFRESHED localStorage after force recovery');
               }
               
-              // Only show a success toast if not in silent mode
               if (!silent) {
                 toast({
                   title: "Survey Loaded",
@@ -106,7 +95,6 @@ export function useSurveyResponse() {
         }
       }
       
-      // If direct access fails, try looking for survey in all available surveys
       const matchingSurvey = surveys.find(s => 
         s.id === specificSurveyId || 
         s.id.includes(specificSurveyId.replace('survey-', ''))
@@ -129,7 +117,6 @@ export function useSurveyResponse() {
     }
   }, [surveys, toast]);
 
-  // Find the survey based on surveyId with enhanced recovery for specific IDs
   useEffect(() => {
     const loadSurvey = async () => {
       setLoading(true);
@@ -144,7 +131,6 @@ export function useSurveyResponse() {
         console.log(`[Try ${retriesCount + 1}] Looking for survey with ID:`, surveyId);
       }
       
-      // Special handling for problematic survey IDs - updated to include the latest problematic ID
       const problematicSurveyIds = [
         'survey-1742852600629', 
         'survey-1742852947140', 
@@ -156,7 +142,6 @@ export function useSurveyResponse() {
         surveyId === id || surveyId.includes(id.replace('survey-', ''))
       );
       
-      // For the specific new problem survey, try force recovery first - with silent flag
       if (surveyId === 'survey-1742853415451') {
         if (process.env.NODE_ENV === 'development') {
           console.log('Attempt immediate silent force recovery for survey-1742853415451');
@@ -173,11 +158,9 @@ export function useSurveyResponse() {
       if (isProblematicId) {
         console.log(`ATTEMPTING SPECIAL RECOVERY for ${surveyId}`);
         
-        // Try direct raw localStorage access first
         try {
           const rawStorage = localStorage.getItem('lovable-surveys');
           if (rawStorage) {
-            // Check if the ID exists in the raw string
             const idExists = problematicSurveyIds.some(id => 
               rawStorage.includes(id) || rawStorage.includes(id.replace('survey-', ''))
             );
@@ -185,13 +168,11 @@ export function useSurveyResponse() {
             if (idExists) {
               console.log(`${surveyId} EXISTS in raw localStorage string!`);
               
-              // Try to parse and access it
               try {
                 const allSurveys = JSON.parse(rawStorage);
                 console.log('All available surveys after fresh parse:', 
                   allSurveys.map((s: any) => s.id).join(', '));
                 
-                // Find our target survey
                 const targetSurvey = allSurveys.find((s: any) => 
                   s.id === surveyId || 
                   (s.id.includes(surveyId.replace('survey-', '')))
@@ -200,10 +181,8 @@ export function useSurveyResponse() {
                 if (targetSurvey) {
                   console.log('FOUND TARGET SURVEY IN DIRECT ACCESS:', targetSurvey);
                   
-                  // Deep clone and fix date issues
                   const surveyToUse = JSON.parse(JSON.stringify(targetSurvey));
                   
-                  // Convert createdAt to Date object
                   if (surveyToUse.createdAt && typeof surveyToUse.createdAt !== 'object') {
                     surveyToUse.createdAt = new Date(surveyToUse.createdAt);
                   } else if (surveyToUse.createdAt?._type === 'Date') {
@@ -214,7 +193,6 @@ export function useSurveyResponse() {
                   setAnswers(initializeAnswers(surveyToUse));
                   setLoading(false);
                   
-                  // Force the storage to a clean state
                   try {
                     localStorage.setItem('lovable-surveys', JSON.stringify(allSurveys));
                     console.log('REFRESHED localStorage after recovery');
@@ -234,7 +212,6 @@ export function useSurveyResponse() {
         }
       }
       
-      // Try URL decoding for safety
       const decodedSurveyId = decodeURIComponent(surveyId);
       if (decodedSurveyId !== surveyId) {
         if (process.env.NODE_ENV === 'development') {
@@ -242,10 +219,8 @@ export function useSurveyResponse() {
         }
       }
       
-      // First try to find in context surveys
       let foundSurvey = findSurveyById(surveyId, surveys, setDirectLocalStorageCheck);
       
-      // If not found with original ID, try with decoded ID
       if (!foundSurvey && decodedSurveyId !== surveyId) {
         if (process.env.NODE_ENV === 'development') {
           console.log(`Trying with decoded ID: ${decodedSurveyId}`);
@@ -263,17 +238,14 @@ export function useSurveyResponse() {
         return;
       }
       
-      // Enhanced manual raw localStorage access for all surveys
       try {
         console.log('Performing enhanced localStorage lookup for all surveys...');
         const rawStorage = localStorage.getItem('lovable-surveys');
         if (rawStorage) {
           try {
-            // Parse all surveys
             const allStoredSurveys = JSON.parse(rawStorage);
             console.log('Raw survey IDs:', allStoredSurveys.map((s: any) => s.id).join(', '));
             
-            // Check every single survey by ID or partial ID to find matches
             for (const storedSurvey of allStoredSurveys) {
               const storedId = storedSurvey.id || '';
               const numericPart = surveyId.includes('-') ? surveyId.split('-')[1] : surveyId;
@@ -285,10 +257,8 @@ export function useSurveyResponse() {
                 
                 console.log('Found matching survey in enhanced lookup:', storedSurvey);
                 
-                // Deep clone and fix date issues
                 const surveyToUse = JSON.parse(JSON.stringify(storedSurvey));
                 
-                // Convert createdAt to Date object if needed
                 if (surveyToUse.createdAt && typeof surveyToUse.createdAt !== 'object') {
                   surveyToUse.createdAt = new Date(surveyToUse.createdAt);
                 } else if (surveyToUse.createdAt?._type === 'Date') {
@@ -309,10 +279,8 @@ export function useSurveyResponse() {
         console.error('Error in enhanced localStorage access:', error);
       }
       
-      // If direct lookup fails, try with the standard methods
       const localStorageSurvey = findSurveyInLocalStorage(surveyId, setDirectLocalStorageCheck);
       
-      // If local storage lookup fails, try with the decoded ID
       if (!localStorageSurvey && decodedSurveyId !== surveyId) {
         if (process.env.NODE_ENV === 'development') {
           console.log(`Direct localStorage lookup failed, trying with decoded ID: ${decodedSurveyId}`);
@@ -339,7 +307,6 @@ export function useSurveyResponse() {
         return;
       }
       
-      // Final attempt - extract and use any available survey that might match
       try {
         const storedSurveysRaw = localStorage.getItem('lovable-surveys');
         if (storedSurveysRaw) {
@@ -347,7 +314,6 @@ export function useSurveyResponse() {
           if (allSurveys.length > 0) {
             console.log('Last resort - checking all surveys for any possible match');
             
-            // Try to find by numeric part of ID
             if (surveyId && surveyId.includes('-')) {
               const numericPart = surveyId.split('-')[1];
               const numericMatchSurvey = allSurveys.find((s: any) => 
@@ -370,9 +336,8 @@ export function useSurveyResponse() {
               }
             }
             
-            // Last resort - if this is a specific problematic ID, just try to use any survey
             if (isProblematicId && allSurveys.length > 0) {
-              const anySurvey = allSurveys[allSurveys.length - 1]; // Use the most recent one
+              const anySurvey = allSurveys[allSurveys.length - 1];
               console.log('Using any available survey as fallback:', anySurvey);
               
               const fixedSurvey = JSON.parse(JSON.stringify(anySurvey));
@@ -418,23 +383,27 @@ export function useSurveyResponse() {
       [questionId]: blob
     }));
     
-    // Also update text answers with a placeholder
     handleAnswerChange(questionId, "[Audio response recorded]");
   };
 
   const handleSubmitSurvey = (respondentInfo: RespondentInfo) => {
-    // Validate responses
-    if (!validateSurveyResponse(answers, toast)) {
+    const allQuestionsHaveAudioRecordings = survey?.questions.every(
+      question => audioBlobs[question.id] !== undefined
+    );
+
+    if (!allQuestionsHaveAudioRecordings) {
+      toast({
+        title: "Missing Audio Responses",
+        description: "Please record audio answers for all questions.",
+        variant: "destructive"
+      });
       return;
     }
     
-    // Submit the survey response
     try {
       if (survey) {
-        // Pass audio blobs along with text answers
         addSurveyResponse(survey.id, answers, respondentInfo, audioBlobs);
         
-        // Show success and move to thank you screen
         toast({
           title: "Success",
           description: "Your feedback has been submitted successfully.",
@@ -458,7 +427,6 @@ export function useSurveyResponse() {
     setLoading(true);
     setRetriesCount(prev => prev + 1);
     
-    // Only show retry toast in development mode
     if (process.env.NODE_ENV === 'development') {
       toast({
         title: "Retrying",
@@ -466,7 +434,6 @@ export function useSurveyResponse() {
       });
     }
     
-    // Force a refresh of the localStorage data
     try {
       const storedSurveysRaw = localStorage.getItem('lovable-surveys');
       if (storedSurveysRaw) {
