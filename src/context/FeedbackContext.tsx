@@ -1,5 +1,4 @@
-
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
 interface Question {
   id: string;
@@ -105,9 +104,17 @@ export const FeedbackProvider = ({ children }: { children: ReactNode }) => {
   ]);
   
   const [feedback, setFeedback] = useState<Feedback[]>([]);
-  const [surveys, setSurveys] = useState<Survey[]>([]);
   const [surveyResponses, setSurveyResponses] = useState<SurveyResponse[]>([]);
   const [currentBrandId, setCurrentBrandId] = useState<string>('brand-1');
+
+  const [surveys, setSurveys] = useState<Survey[]>(() => {
+    const storedSurveys = localStorage.getItem('lovable-surveys');
+    return storedSurveys ? JSON.parse(storedSurveys) : [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('lovable-surveys', JSON.stringify(surveys));
+  }, [surveys]);
 
   const addBrand = (name: string) => {
     const newBrand: Brand = {
@@ -144,7 +151,6 @@ export const FeedbackProvider = ({ children }: { children: ReactNode }) => {
     
     setFeedback(prev => [...prev, newFeedback]);
     
-    // Mock transcription and insights - in a real app, you'd use an API
     setTimeout(() => {
       setFeedback(prev =>
         prev.map(item =>
@@ -168,7 +174,6 @@ export const FeedbackProvider = ({ children }: { children: ReactNode }) => {
   const addSurvey = (brandId: string, title: string, description: string, questionsList: {text: string, description: string}[]) => {
     const surveyId = `survey-${Date.now()}`;
     
-    // Create survey questions with unique IDs
     const surveyQuestions: SurveyQuestion[] = questionsList.map(q => ({
       id: `sq-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       text: q.text,
@@ -199,15 +204,13 @@ export const FeedbackProvider = ({ children }: { children: ReactNode }) => {
     
     setSurveyResponses(prev => [...prev, newResponse]);
     
-    // If there's a respondent with email, we could award store credit to the brand
-    // This is a mock implementation - in a real app, you'd have a more sophisticated system
     if (respondent && respondent.email) {
       const survey = surveys.find(s => s.id === surveyId);
       if (survey) {
         setBrands(prev => 
           prev.map(brand => 
             brand.id === survey.brandId 
-              ? { ...brand, storeCredit: brand.storeCredit + 10 } // Award 10 credits per response
+              ? { ...brand, storeCredit: brand.storeCredit + 10 }
               : brand
           )
         );
