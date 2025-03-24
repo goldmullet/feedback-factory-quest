@@ -25,7 +25,7 @@ export const createSurvey = (
 
 export const createSurveyResponse = (
   surveyId: string, 
-  answers: {questionId: string, answer: string}[],
+  answers: {questionId: string, answer: string, transcription?: string, insights?: string[]}[],
   respondent?: {name: string, email: string},
   audioBlobs?: {[key: string]: Blob}
 ): SurveyResponse => {
@@ -49,6 +49,28 @@ export const createSurveyResponse = (
     });
     
     response.audioUrls = audioUrls;
+  }
+  
+  // Store AI processed transcriptions and insights if available
+  const transcriptions: {[key: string]: string} = {};
+  const insights: {[key: string]: string[]} = {};
+  
+  answers.forEach(answer => {
+    if (answer.transcription) {
+      transcriptions[answer.questionId] = answer.transcription;
+    }
+    
+    if (answer.insights) {
+      insights[answer.questionId] = answer.insights;
+    }
+  });
+  
+  if (Object.keys(transcriptions).length > 0) {
+    response.transcriptions = transcriptions;
+  }
+  
+  if (Object.keys(insights).length > 0) {
+    response.insights = insights;
   }
   
   return response;

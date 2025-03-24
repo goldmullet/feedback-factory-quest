@@ -41,13 +41,21 @@ export interface SurveyResponse {
   answers: {
     questionId: string;
     answer: string;
+    transcription?: string;
+    insights?: string[];
   }[];
   respondent?: {
     name: string;
     email: string;
   };
   audioUrls?: {
-    [key: string]: string;
+    [questionId: string]: string;
+  };
+  transcriptions?: {
+    [questionId: string]: string;
+  };
+  insights?: {
+    [questionId: string]: string[];
   };
   createdAt: Date;
 }

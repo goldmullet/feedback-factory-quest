@@ -48,7 +48,11 @@ export function useSurveyResponse() {
   } = useRespondentForm(() => setCurrentStep('questions'));
 
   // Handle survey submission
-  const handleSubmitSurvey = (respondentInfo: RespondentInfo, audioBlobs: {[key: string]: Blob} = {}) => {
+  const handleSubmitSurvey = (
+    respondentInfo: RespondentInfo, 
+    audioBlobs: {[key: string]: Blob} = {},
+    processedAnswers?: {questionId: string, answer: string, transcription?: string, insights?: string[]}[]
+  ) => {
     if (!validateAudioResponses(survey, audioBlobs)) {
       return;
     }
@@ -56,7 +60,12 @@ export function useSurveyResponse() {
     try {
       if (survey) {
         console.log('Adding survey response with audio blobs:', Object.keys(audioBlobs).length);
-        addSurveyResponse(survey.id, answers, respondentInfo, audioBlobs);
+        console.log('Using AI processed answers:', !!processedAnswers);
+        
+        // Use processed answers if available, otherwise use regular answers
+        const answersToSubmit = processedAnswers || answers;
+        
+        addSurveyResponse(survey.id, answersToSubmit, respondentInfo, audioBlobs);
         
         toast({
           title: "Success",

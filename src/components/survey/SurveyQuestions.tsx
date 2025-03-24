@@ -7,7 +7,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import Question from '@/components/Question';
 import { Survey } from '@/types';
 import AudioRecorder from '@/components/AudioRecorder';
-import { Mic, CheckCircle, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Mic, CheckCircle, ArrowRight, ArrowLeft, Wand } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { debugLog } from '@/utils/debugUtils';
 
@@ -16,13 +16,15 @@ interface SurveyQuestionsProps {
   answers: {questionId: string, answer: string}[];
   onAnswerChange: (questionId: string, answer: string) => void;
   onSubmit: () => void;
+  isProcessingAudio?: boolean;
 }
 
 const SurveyQuestions = ({ 
   survey, 
   answers, 
   onAnswerChange, 
-  onSubmit 
+  onSubmit,
+  isProcessingAudio = false
 }: SurveyQuestionsProps) => {
   const [audioBlobs, setAudioBlobs] = useState<{[key: string]: Blob}>({});
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -173,6 +175,7 @@ const SurveyQuestions = ({
               variant="outline" 
               onClick={handlePrevious}
               className="flex items-center gap-2"
+              disabled={isProcessingAudio}
             >
               <ArrowLeft className="h-4 w-4" />
               Previous
@@ -188,7 +191,7 @@ const SurveyQuestions = ({
                   <span>
                     <Button 
                       onClick={handleNext}
-                      disabled={!hasCurrentAnswer()}
+                      disabled={!hasCurrentAnswer() || isProcessingAudio}
                       className="flex items-center gap-2"
                     >
                       Next
@@ -210,14 +213,21 @@ const SurveyQuestions = ({
                   <span>
                     <Button 
                       onClick={handleSubmit}
-                      disabled={!allQuestionsAnswered()}
-                      className="bg-green-600 hover:bg-green-700"
+                      disabled={!allQuestionsAnswered() || isProcessingAudio}
+                      className={`bg-green-600 hover:bg-green-700 flex items-center gap-2 ${isProcessingAudio ? 'opacity-90' : ''}`}
                     >
-                      Submit Feedback
+                      {isProcessingAudio ? (
+                        <>
+                          <Wand className="h-4 w-4 animate-spin" />
+                          Processing Audio...
+                        </>
+                      ) : (
+                        <>Submit Feedback</>
+                      )}
                     </Button>
                   </span>
                 </TooltipTrigger>
-                {!allQuestionsAnswered() && (
+                {!allQuestionsAnswered() && !isProcessingAudio && (
                   <TooltipContent>
                     Please record audio for all questions
                   </TooltipContent>

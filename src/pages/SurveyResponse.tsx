@@ -14,6 +14,7 @@ import SurveyNotFound from '@/components/survey/SurveyNotFound';
 import SurveyLoading from '@/components/survey/SurveyLoading';
 import SurveyResponseLayout from '@/components/survey/SurveyResponseLayout';
 import AudioBlobsInitializer from '@/components/survey/AudioBlobsInitializer';
+import { transcribeAudio, analyzeTranscription } from '@/utils/aiUtils';
 
 // Add audioBlobs to the global Window interface
 declare global {
@@ -26,6 +27,7 @@ const SurveyResponse = () => {
   const { surveyId } = useParams();
   const { surveys } = useFeedback();
   const [manualRecoveryAttempted, setManualRecoveryAttempted] = useState(false);
+  const [isProcessingAudio, setIsProcessingAudio] = useState(false);
   
   // Initialize global audioBlobs
   window.audioBlobs = {};
@@ -176,11 +178,52 @@ const SurveyResponse = () => {
     />;
   }
 
-  // Modified handleSubmit to get audioBlobs from window object
-  const handleSubmit = () => {
+  // Modified handleSubmit to process audio with AI before submitting
+  const handleSubmit = async () => {
     const globalAudioBlobs = window.audioBlobs || {};
     console.log('Submitting survey with global audio blobs:', Object.keys(globalAudioBlobs).length);
-    handleSubmitSurvey(respondentInfo, globalAudioBlobs);
+    
+    setIsProcessingAudio(true);
+    
+    try {
+      // Process each audio blob to get transcriptions and insights
+      const processedAnswers = [...answers];
+      
+      // Process audio files in parallel
+      const audioProcessingPromises = Object.entries(globalAudioBlobs).map(async ([questionId, blob]) => {
+        // Transcribe the audio
+        const transcription = await transcribeAudio(blob);
+        console.log(`Transcription for ${questionId}:`, transcription);
+        
+        // Analyze the transcription to extract insights
+        const insights = await analyzeTranscription(transcription);
+        console.log(`Insights for ${questionId}:`, insights);
+        
+        // Update the answer with transcription and insights
+        const answerIndex = processedAnswers.findIndex(a => a.questionId === questionId);
+        if (answerIndex !== -1) {
+          processedAnswers[answerIndex] = {
+            ...processedAnswers[answerIndex],
+            transcription,
+            insights
+          };
+        }
+        
+        return { questionId, transcription, insights };
+      });
+      
+      // Wait for all audio processing to complete
+      await Promise.all(audioProcessingPromises);
+      
+      // Submit the survey with processed answers
+      handleSubmitSurvey(respondentInfo, globalAudioBlobs, processedAnswers);
+    } catch (error) {
+      console.error('Error processing audio:', error);
+      // Fall back to regular submission without transcriptions
+      handleSubmitSurvey(respondentInfo, globalAudioBlobs);
+    } finally {
+      setIsProcessingAudio(false);
+    }
   };
 
   return (
@@ -207,6 +250,7 @@ const SurveyResponse = () => {
           answers={answers}
           onAnswerChange={handleAnswerChange}
           onSubmit={handleSubmit}
+          isProcessingAudio={isProcessingAudio}
         />
       )}
 
