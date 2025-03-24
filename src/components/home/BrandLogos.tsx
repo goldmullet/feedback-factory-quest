@@ -6,27 +6,27 @@ const BrandLogos = () => {
     {
       name: 'Legends',
       logo: '/lovable-uploads/2cde1c68-270f-4ea9-80ca-f4ae21e8f4c9.png',
-      height: 'h-24' // Increased height for better visibility
+      className: 'max-h-24 max-w-[200px]' // Using max-height and max-width instead of fixed height
     },
     {
       name: 'Brand 2',
       logo: 'https://placehold.co/200x80/f5f7ff/a6b4fc?text=Brand+2',
-      height: 'h-8'
+      className: 'max-h-8 max-w-[160px]'
     },
     {
       name: 'Brand 3',
       logo: 'https://placehold.co/200x80/f5f7ff/a6b4fc?text=Brand+3',
-      height: 'h-8'
+      className: 'max-h-8 max-w-[160px]'
     },
     {
       name: 'Brand 4',
       logo: 'https://placehold.co/200x80/f5f7ff/a6b4fc?text=Brand+4',
-      height: 'h-8'
+      className: 'max-h-8 max-w-[160px]'
     },
     {
       name: 'Brand 5',
       logo: 'https://placehold.co/200x80/f5f7ff/a6b4fc?text=Brand+5',
-      height: 'h-8'
+      className: 'max-h-8 max-w-[160px]'
     }
   ];
 
@@ -46,7 +46,7 @@ const BrandLogos = () => {
           {brands.map((brand, index) => (
             <motion.div 
               key={index} 
-              className={`${brand.height} flex items-center`}
+              className="flex items-center justify-center"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: index * 0.1 }}
@@ -55,7 +55,11 @@ const BrandLogos = () => {
               <img 
                 src={brand.logo} 
                 alt={`${brand.name} logo`} 
-                className="w-auto h-full object-contain" 
+                className={`${brand.className} object-contain`}
+                onError={(e) => {
+                  console.error(`Failed to load image: ${brand.logo}`);
+                  e.currentTarget.style.display = 'none';
+                }}
               />
             </motion.div>
           ))}
