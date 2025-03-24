@@ -387,11 +387,9 @@ export function useSurveyResponse() {
   };
 
   const handleSubmitSurvey = (respondentInfo: RespondentInfo) => {
-    const allQuestionsHaveAudioRecordings = survey?.questions.every(
-      question => audioBlobs[question.id] !== undefined
-    );
-
-    if (!allQuestionsHaveAudioRecordings) {
+    const audioRecordingsCount = Object.keys(audioBlobs).length;
+    
+    if (audioRecordingsCount < survey?.questions.length!) {
       toast({
         title: "Missing Audio Responses",
         description: "Please record audio answers for all questions.",

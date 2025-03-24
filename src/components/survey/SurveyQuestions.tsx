@@ -54,10 +54,7 @@ const SurveyQuestions = ({
     if (!currentQuestion) return false;
     
     // Check if this question has an audio recording
-    return answers.some(a => 
-      a.questionId === currentQuestion.id && 
-      a.answer === "[Audio response recorded]"
-    );
+    return audioBlobs[currentQuestion.id] !== undefined;
   };
   
   const isLastQuestion = currentQuestionIndex === survey.questions.length - 1;
@@ -65,10 +62,7 @@ const SurveyQuestions = ({
 
   // Check if all questions have audio answers
   const allQuestionsAnswered = survey.questions.every(question => {
-    return answers.some(a => 
-      a.questionId === question.id && 
-      a.answer === "[Audio response recorded]"
-    );
+    return audioBlobs[question.id] !== undefined;
   });
 
   return (
