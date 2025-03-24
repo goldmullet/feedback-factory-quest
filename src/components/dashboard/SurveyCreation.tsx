@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -23,6 +23,15 @@ const SurveyCreation = ({ open, onOpenChange, onCreateSurvey }: SurveyCreationPr
   ]);
   
   const { toast } = useToast();
+
+  // Reset form when dialog opens
+  useEffect(() => {
+    if (open) {
+      setSurveyTitle('');
+      setSurveyDescription('');
+      setSurveyQuestions([{text: '', description: ''}]);
+    }
+  }, [open]);
 
   const handleAddQuestion = () => {
     setSurveyQuestions([...surveyQuestions, {text: '', description: ''}]);
@@ -49,6 +58,13 @@ const SurveyCreation = ({ open, onOpenChange, onCreateSurvey }: SurveyCreationPr
   };
 
   const handleCreateSurvey = () => {
+    // Log the current state for debugging
+    console.log("Creating survey with:", { 
+      title: surveyTitle, 
+      description: surveyDescription, 
+      questions: surveyQuestions 
+    });
+    
     // Validate survey title
     if (!surveyTitle.trim()) {
       toast({
@@ -59,7 +75,7 @@ const SurveyCreation = ({ open, onOpenChange, onCreateSurvey }: SurveyCreationPr
       return;
     }
 
-    // Check for non-empty questions
+    // Filter out completely empty questions (both text and description are empty)
     const validQuestions = surveyQuestions.filter(q => q.text.trim().length > 0);
     
     // Ensure there's at least one valid question
@@ -76,19 +92,17 @@ const SurveyCreation = ({ open, onOpenChange, onCreateSurvey }: SurveyCreationPr
       // Create survey with valid questions only
       onCreateSurvey(surveyTitle, surveyDescription, validQuestions);
       
-      // Reset form
-      setSurveyTitle('');
-      setSurveyDescription('');
-      setSurveyQuestions([{text: '', description: ''}]);
-      
-      // Close dialog
-      onOpenChange(false);
-      
       // Show success toast
       toast({
         title: "Survey created",
         description: "Your survey has been created successfully."
       });
+      
+      // Reset form and close dialog
+      setSurveyTitle('');
+      setSurveyDescription('');
+      setSurveyQuestions([{text: '', description: ''}]);
+      onOpenChange(false);
     } catch (error) {
       console.error("Error creating survey:", error);
       toast({
