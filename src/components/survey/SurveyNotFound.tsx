@@ -2,17 +2,23 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle, Home, RefreshCw, ExternalLink } from 'lucide-react';
+import { AlertCircle, Home, RefreshCw, ExternalLink, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface SurveyNotFoundProps {
   onNavigateHome: () => void;
   surveyId?: string;
   onRetry?: () => void;
+  directLocalStorageCheck?: boolean;
 }
 
-const SurveyNotFound = ({ onNavigateHome, surveyId, onRetry }: SurveyNotFoundProps) => {
-  const [showDebugInfo, setShowDebugInfo] = useState(false);
+const SurveyNotFound = ({ 
+  onNavigateHome, 
+  surveyId, 
+  onRetry, 
+  directLocalStorageCheck = false 
+}: SurveyNotFoundProps) => {
+  const [showDebugInfo, setShowDebugInfo] = useState(true);
   const { toast } = useToast();
   
   // Try to fetch stored surveys directly
@@ -29,9 +35,13 @@ const SurveyNotFound = ({ onNavigateHome, surveyId, onRetry }: SurveyNotFoundPro
   };
   
   const storedSurveys = getStoredSurveys();
-  const surveyExists = surveyId && storedSurveys.some((s: any) => 
-    s.id === surveyId || (typeof s.id === 'string' && s.id.toLowerCase() === surveyId.toLowerCase())
+  
+  // More thorough survey existence checks
+  const exactMatch = surveyId && storedSurveys.some((s: any) => s.id === surveyId);
+  const caseInsensitiveMatch = surveyId && storedSurveys.some((s: any) => 
+    typeof s.id === 'string' && s.id.toLowerCase() === surveyId.toLowerCase()
   );
+  const surveyExists = exactMatch || caseInsensitiveMatch;
   
   // Display a toast with survey info when component mounts
   useEffect(() => {
@@ -45,6 +55,50 @@ const SurveyNotFound = ({ onNavigateHome, surveyId, onRetry }: SurveyNotFoundPro
       });
     }
   }, [surveyId, surveyExists, toast]);
+  
+  const handleCheckForExactSurvey = () => {
+    if (!surveyId) return;
+    
+    // Just to double-check, directly try to find the survey in localStorage
+    try {
+      const storedSurveysRaw = localStorage.getItem('lovable-surveys');
+      if (storedSurveysRaw) {
+        const parsedSurveys = JSON.parse(storedSurveysRaw);
+        
+        // Log all survey IDs
+        console.log('All survey IDs in localStorage:', parsedSurveys.map((s: any) => s.id));
+        
+        // Find the exact survey we're looking for
+        const exactSurvey = parsedSurveys.find((s: any) => s.id === surveyId);
+        const caseInsensitiveSurvey = parsedSurveys.find((s: any) => 
+          typeof s.id === 'string' && s.id.toLowerCase() === surveyId.toLowerCase()
+        );
+        
+        if (exactSurvey) {
+          console.log('Found exact match survey:', exactSurvey);
+          toast({
+            title: "Survey Found in Storage",
+            description: "The survey exists in localStorage with an exact ID match.",
+          });
+        } else if (caseInsensitiveSurvey) {
+          console.log('Found case-insensitive match survey:', caseInsensitiveSurvey);
+          toast({
+            title: "Survey Found in Storage",
+            description: "The survey exists in localStorage with a case-insensitive ID match.",
+          });
+        } else {
+          console.log('Survey not found in localStorage, even on manual check');
+          toast({
+            title: "Survey Not Found",
+            description: "The survey was not found in localStorage, even after manual checking.",
+            variant: "destructive"
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error during manual survey check:', error);
+    }
+  };
   
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4">
@@ -64,6 +118,16 @@ const SurveyNotFound = ({ onNavigateHome, surveyId, onRetry }: SurveyNotFoundPro
           {surveyId && (
             <div className="bg-muted p-3 rounded-md mb-6 text-sm overflow-hidden">
               <p className="font-mono overflow-ellipsis overflow-hidden">ID: {surveyId}</p>
+              <div className="mt-2 flex space-x-2 justify-center">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleCheckForExactSurvey}
+                >
+                  <Search className="h-3 w-3 mr-1" />
+                  Check Again
+                </Button>
+              </div>
             </div>
           )}
           
@@ -72,9 +136,15 @@ const SurveyNotFound = ({ onNavigateHome, surveyId, onRetry }: SurveyNotFoundPro
               <h3 className="font-medium mb-2 text-sm">Debug Information:</h3>
               <ul className="space-y-2 text-xs text-muted-foreground">
                 <li>• Surveys in localStorage: {storedSurveys.length}</li>
-                <li>• Survey IDs: {storedSurveys.map((s: any) => s.id.slice(0, 20) + (s.id.length > 20 ? '...' : '')).join(', ')}</li>
+                <li>• Exact match in localStorage: {exactMatch ? 'Yes' : 'No'}</li>
+                <li>• Case-insensitive match: {caseInsensitiveMatch ? 'Yes' : 'No'}</li>
+                <li>• Direct localStorage check performed: {directLocalStorageCheck ? 'Yes' : 'No'}</li>
                 <li>• Current URL: {window.location.href}</li>
-                <li>• Survey exists in storage: {surveyExists ? 'Yes' : 'No'}</li>
+                <li>• Available IDs: {storedSurveys.slice(0, 3).map((s: any) => 
+                    s.id.slice(0, 15) + (s.id.length > 15 ? '...' : '')
+                  ).join(', ')}
+                  {storedSurveys.length > 3 ? ` (+${storedSurveys.length - 3} more)` : ''}
+                </li>
               </ul>
             </div>
           )}

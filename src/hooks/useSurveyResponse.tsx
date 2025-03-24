@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useFeedback } from '@/context/feedback';
 import { useToast } from '@/hooks/use-toast';
@@ -17,6 +17,7 @@ export function useSurveyResponse() {
   const [answers, setAnswers] = useState<{questionId: string, answer: string}[]>([]);
   const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
   const [retriesCount, setRetriesCount] = useState(0);
+  const [directLocalStorageCheck, setDirectLocalStorageCheck] = useState(false);
 
   // Find the survey based on surveyId with improved debugging
   useEffect(() => {
@@ -36,6 +37,14 @@ export function useSurveyResponse() {
       // First, try to find the survey in the context
       let foundSurvey = surveys.find(s => s.id === surveyId);
       
+      // If not found with exact match, try case-insensitive match in context
+      if (!foundSurvey) {
+        console.log('Trying case-insensitive match in context...');
+        foundSurvey = surveys.find(s => 
+          typeof s.id === 'string' && s.id.toLowerCase() === surveyId.toLowerCase()
+        );
+      }
+      
       if (foundSurvey) {
         console.log('Survey found in context:', foundSurvey);
         setSurvey(foundSurvey);
@@ -50,6 +59,7 @@ export function useSurveyResponse() {
         const storedSurveysRaw = localStorage.getItem('lovable-surveys');
         if (storedSurveysRaw) {
           console.log('Raw stored surveys from localStorage:', storedSurveysRaw);
+          setDirectLocalStorageCheck(true);
           
           // Parse the stored surveys
           let storedSurveys;
@@ -57,6 +67,16 @@ export function useSurveyResponse() {
             storedSurveys = JSON.parse(storedSurveysRaw);
             console.log('Number of surveys in localStorage:', storedSurveys.length);
             console.log('Available survey IDs:', storedSurveys.map((s: any) => s.id).join(', '));
+            
+            // Check if our survey ID is in the localStorage data
+            const exactMatch = storedSurveys.some((s: any) => s.id === surveyId);
+            const caseInsensitiveMatch = storedSurveys.some((s: any) => 
+              typeof s.id === 'string' && s.id.toLowerCase() === surveyId.toLowerCase()
+            );
+            
+            console.log(`Survey ID exact match in localStorage: ${exactMatch}`);
+            console.log(`Survey ID case-insensitive match in localStorage: ${caseInsensitiveMatch}`);
+            
           } catch (parseError) {
             console.error('Error parsing localStorage surveys:', parseError);
             toast({
@@ -73,7 +93,7 @@ export function useSurveyResponse() {
           
           // If not found, try case-insensitive match
           if (!localStorageSurvey) {
-            console.log('Trying case-insensitive match...');
+            console.log('Trying case-insensitive match in localStorage...');
             localStorageSurvey = storedSurveys.find((s: any) => 
               typeof s.id === 'string' && s.id.toLowerCase() === surveyId.toLowerCase()
             );
@@ -189,14 +209,14 @@ export function useSurveyResponse() {
     }
   };
 
-  const handleRetry = () => {
+  const handleRetry = useCallback(() => {
     setLoading(true);
     setRetriesCount(prev => prev + 1);
-  };
+  }, []);
 
-  const handleNavigateHome = () => {
+  const handleNavigateHome = useCallback(() => {
     navigate('/brand/dashboard');
-  };
+  }, [navigate]);
 
   return {
     survey,
@@ -204,6 +224,7 @@ export function useSurveyResponse() {
     currentStep,
     answers,
     formErrors,
+    directLocalStorageCheck,
     setCurrentStep,
     handleInfoSubmit,
     handleAnswerChange,

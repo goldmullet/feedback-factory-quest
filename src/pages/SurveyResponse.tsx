@@ -18,6 +18,7 @@ const SurveyResponse = () => {
     currentStep,
     answers,
     formErrors,
+    directLocalStorageCheck,
     setCurrentStep,
     handleInfoSubmit,
     handleAnswerChange,
@@ -51,6 +52,7 @@ const SurveyResponse = () => {
       onNavigateHome={handleNavigateHome} 
       surveyId={surveyId}
       onRetry={handleRetry}
+      directLocalStorageCheck={directLocalStorageCheck}
     />;
   }
 
