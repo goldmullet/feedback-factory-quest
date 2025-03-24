@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle, Home, RefreshCw, ExternalLink, Search, Database } from 'lucide-react';
+import { AlertCircle, Home, RefreshCw, ExternalLink, Search, Database, RotateCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface SurveyNotFoundProps {
@@ -19,6 +19,7 @@ const SurveyNotFound = ({
   directLocalStorageCheck = false 
 }: SurveyNotFoundProps) => {
   const [showDebugInfo, setShowDebugInfo] = useState(true);
+  const [isRepairing, setIsRepairing] = useState(false);
   const { toast } = useToast();
   
   // Try to fetch stored surveys directly
@@ -83,11 +84,15 @@ const SurveyNotFound = ({
       }
       
       // Special check for problematic IDs
-      if (surveyId === 'survey-1742852600629') {
-        console.log('Checking specifically for survey-1742852600629');
+      const problematicSurveyIds = ['survey-1742852600629', 'survey-1742852947140', 'survey-1742850890608'];
+      if (surveyId && problematicSurveyIds.some(id => surveyId === id || surveyId.includes(id.replace('survey-', '')))) {
+        console.log(`Checking specifically for ${surveyId}`);
         const rawStorage = localStorage.getItem('lovable-surveys');
-        if (rawStorage && rawStorage.includes('1742852600629')) {
-          console.log('Found survey-1742852600629 in raw localStorage string!');
+        if (rawStorage) {
+          const numericPart = surveyId.includes('-') ? surveyId.split('-')[1] : surveyId;
+          if (rawStorage.includes(surveyId) || rawStorage.includes(numericPart)) {
+            console.log(`Found ${surveyId} in raw localStorage string!`);
+          }
         }
       }
     }
@@ -147,59 +152,104 @@ const SurveyNotFound = ({
             title: "Survey Found in Storage",
             description: "The survey exists in localStorage with an exact ID match.",
           });
+          
+          // Try to repair anyway
+          repairAndRetry(parsedSurveys);
         } else if (decodedMatch) {
           console.log('Found URL-decoded match survey:', decodedMatch);
           toast({
             title: "Survey Found via URL Decoding",
             description: "The survey exists in localStorage with a URL-decoded ID match.",
           });
+          
+          repairAndRetry(parsedSurveys);
         } else if (caseInsensitiveSurvey) {
           console.log('Found case-insensitive match survey:', caseInsensitiveSurvey);
           toast({
             title: "Survey Found in Storage",
             description: "The survey exists in localStorage with a case-insensitive ID match.",
           });
+          
+          repairAndRetry(parsedSurveys);
         } else if (partialMatchSurvey) {
           console.log('Found partial match survey:', partialMatchSurvey);
           toast({
             title: "Survey Found in Storage",
             description: "A survey with a similar ID exists in localStorage.",
           });
+          
+          repairAndRetry(parsedSurveys);
         } else if (numericMatchSurvey) {
           console.log('Found numeric match survey:', numericMatchSurvey);
           toast({
             title: "Survey Found by Numeric ID",
             description: "A survey matching the numeric part of the ID exists in localStorage.",
           });
+          
+          repairAndRetry(parsedSurveys);
         } else {
           console.log('Survey not found in localStorage, even on manual check');
           
           // Final attempt - try repairing localStorage
-          try {
-            localStorage.setItem('lovable-surveys', JSON.stringify(parsedSurveys));
-            console.log('Attempted to repair localStorage');
-            
-            // Now try one more time after repair
-            if (onRetry) {
-              toast({
-                title: "Storage Repaired",
-                description: "Attempted to repair localStorage. Retrying survey load...",
-              });
-              setTimeout(onRetry, 500);
-            }
-          } catch (e) {
-            console.error('Failed to repair localStorage:', e);
-          }
-          
-          toast({
-            title: "Survey Not Found",
-            description: "The survey was not found in localStorage, even after manual checking.",
-            variant: "destructive"
-          });
+          repairAndRetry(parsedSurveys);
         }
       }
     } catch (error) {
       console.error('Error during manual survey check:', error);
+    }
+  };
+  
+  // Enhanced repair function
+  const repairAndRetry = (surveys: any[] = []) => {
+    setIsRepairing(true);
+    
+    try {
+      // If no surveys were passed, try to get them
+      const surveysToUse = surveys.length > 0 ? surveys : getStoredSurveys();
+      
+      if (surveysToUse.length > 0) {
+        // 1. Deep clone all surveys to ensure clean objects
+        const cleanSurveys = JSON.parse(JSON.stringify(surveysToUse));
+        
+        // 2. Fix any date issues
+        cleanSurveys.forEach((survey: any) => {
+          if (survey.createdAt && typeof survey.createdAt !== 'object') {
+            survey.createdAt = new Date(survey.createdAt);
+          } else if (survey.createdAt?._type === 'Date') {
+            survey.createdAt = new Date(survey.createdAt.value.iso);
+          }
+        });
+        
+        // 3. Write the fixed surveys back to localStorage
+        localStorage.setItem('lovable-surveys', JSON.stringify(cleanSurveys));
+        console.log('Storage repaired with clean data for all surveys');
+        
+        toast({
+          title: "Storage Repair Complete",
+          description: "Fixed potential data issues. Retrying load...",
+        });
+        
+        // 4. Wait a moment and trigger retry
+        setTimeout(() => {
+          setIsRepairing(false);
+          if (onRetry) onRetry();
+        }, 1000);
+      } else {
+        setIsRepairing(false);
+        toast({
+          title: "Repair Failed",
+          description: "No surveys found to repair.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error during storage repair:', error);
+      setIsRepairing(false);
+      toast({
+        title: "Repair Failed",
+        description: "An error occurred while trying to repair storage.",
+        variant: "destructive"
+      });
     }
   };
   
@@ -231,6 +281,7 @@ const SurveyNotFound = ({
                   variant="outline" 
                   size="sm" 
                   onClick={handleCheckForExactSurvey}
+                  disabled={isRepairing}
                 >
                   <Search className="h-3 w-3 mr-1" />
                   Check Again
@@ -238,30 +289,11 @@ const SurveyNotFound = ({
                 <Button 
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    // Try to view localStorage
-                    console.log('Current localStorage for surveys:', localStorage.getItem('lovable-surveys'));
-                    
-                    // Try to repair localStorage
-                    try {
-                      const rawStorage = localStorage.getItem('lovable-surveys');
-                      if (rawStorage) {
-                        const parsed = JSON.parse(rawStorage);
-                        localStorage.setItem('lovable-surveys', JSON.stringify(parsed));
-                        console.log('Attempted to repair localStorage');
-                        
-                        toast({
-                          title: "Storage Repair Attempted",
-                          description: "Tried to fix any potential localStorage corruption. Click Retry to check.",
-                        });
-                      }
-                    } catch (e) {
-                      console.error('Error repairing localStorage:', e);
-                    }
-                  }}
+                  onClick={() => repairAndRetry()}
+                  disabled={isRepairing}
                 >
                   <Database className="h-3 w-3 mr-1" />
-                  Repair Store
+                  {isRepairing ? 'Repairing...' : 'Repair Store'}
                 </Button>
               </div>
             </div>
@@ -292,26 +324,20 @@ const SurveyNotFound = ({
                   variant="outline" 
                   size="sm" 
                   className="mt-2"
-                  onClick={() => {
-                    // Force a survey recovery attempt by rewriting localStorage
-                    try {
-                      localStorage.setItem('lovable-surveys', JSON.stringify(storedSurveys));
-                      console.log('Refreshed localStorage with clean data');
-                      
-                      if (onRetry) {
-                        toast({
-                          title: "Storage Refreshed",
-                          description: "Refreshed localStorage. Retrying survey load...",
-                        });
-                        setTimeout(onRetry, 500);
-                      }
-                    } catch (e) {
-                      console.error('Failed to refresh localStorage:', e);
-                    }
-                  }}
+                  onClick={() => repairAndRetry()}
+                  disabled={isRepairing}
                 >
-                  <RefreshCw className="h-3 w-3 mr-1" />
-                  Force Refresh Storage
+                  {isRepairing ? (
+                    <>
+                      <RotateCw className="h-3 w-3 mr-1 animate-spin" />
+                      Repairing...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="h-3 w-3 mr-1" />
+                      Force Refresh Storage
+                    </>
+                  )}
                 </Button>
               )}
             </div>
@@ -331,8 +357,12 @@ const SurveyNotFound = ({
             Home
           </Button>
           {onRetry && (
-            <Button onClick={onRetry}>
-              <RefreshCw className="mr-2 h-4 w-4" />
+            <Button onClick={onRetry} disabled={isRepairing}>
+              {isRepairing ? (
+                <RotateCw className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 h-4 w-4" />
+              )}
               Retry
             </Button>
           )}

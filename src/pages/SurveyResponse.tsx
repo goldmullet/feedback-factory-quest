@@ -10,10 +10,13 @@ import SurveyResponseLayout from '@/components/survey/SurveyResponseLayout';
 import { useParams } from 'react-router-dom';
 import { useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { useFeedback } from '@/context/feedback';
 
 const SurveyResponse = () => {
   const { surveyId } = useParams();
   const { toast } = useToast();
+  const { surveys } = useFeedback();
+  
   const {
     survey,
     loading,
@@ -35,6 +38,7 @@ const SurveyResponse = () => {
   useEffect(() => {
     console.log(`SurveyResponse rendered - Survey ID from URL: ${surveyId}`);
     console.log(`Survey loaded: ${!!survey}, Loading: ${loading}`);
+    console.log('Available surveys from context:', surveys.map(s => s.id).join(', '));
     
     // Manually check if the survey is in localStorage
     try {
@@ -46,12 +50,17 @@ const SurveyResponse = () => {
         const exactMatch = storedSurveys.some((s: any) => s.id === surveyId);
         console.log(`Manual check - Survey ID exact match in localStorage: ${exactMatch}`);
         
-        // If current ID is the problematic one, try harder
-        if (surveyId === 'survey-1742852600629' || surveyId?.includes('1742852600629')) {
-          console.log('ATTEMPTING SPECIAL RECOVERY for survey-1742852600629');
+        // For all problematic survey IDs
+        const problematicSurveyIds = ['survey-1742852600629', 'survey-1742852947140', 'survey-1742850890608'];
+        
+        if (surveyId && problematicSurveyIds.some(id => surveyId === id || surveyId?.includes(id.replace('survey-', '')))) {
+          const idToCheck = surveyId;
+          console.log(`ATTEMPTING SPECIAL RECOVERY for ${idToCheck}`);
+          
           // Look for this specific ID
           const targetSurvey = storedSurveys.find((s: any) => 
-            s.id === 'survey-1742852600629' || s.id.includes('1742852600629')
+            s.id === idToCheck || 
+            s.id.includes(idToCheck.replace('survey-', ''))
           );
           
           if (targetSurvey) {
@@ -88,7 +97,7 @@ const SurveyResponse = () => {
         description: `Successfully loaded "${survey.title}" with ${survey.questions.length} questions`,
       });
     }
-  }, [surveyId, survey, loading, toast, handleRetry]);
+  }, [surveyId, survey, loading, toast, handleRetry, surveys]);
 
   if (loading) {
     return <SurveyLoading />;
