@@ -1,5 +1,5 @@
 
-import { useSurveyResponse } from '@/hooks/useSurveyResponse';
+import { useSurveyResponse } from '@/hooks/survey/useSurveyResponse';
 import SurveyIntro from '@/components/survey/SurveyIntro';
 import SurveyRespondentForm from '@/components/survey/SurveyRespondentForm';
 import SurveyQuestions from '@/components/survey/SurveyQuestions';

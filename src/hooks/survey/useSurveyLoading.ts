@@ -1,120 +1,43 @@
+
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useFeedback } from '@/context/feedback';
-import { useToast } from '@/hooks/use-toast';
 import { Survey } from '@/types';
-import { findSurveyById, findSurveyInLocalStorage, initializeAnswers, validateSurveyResponse } from '@/utils/surveyUtils';
-import { useRespondentForm, RespondentInfo } from '@/hooks/useRespondentForm';
+import { findSurveyById, findSurveyInLocalStorage, initializeAnswers } from '@/utils/surveyUtils';
+import { useToast } from '@/hooks/use-toast';
+import { useSurveyRecovery } from './useSurveyRecovery';
 
-type SurveyStep = 'intro' | 'info' | 'questions' | 'thank-you';
-
-export function useSurveyResponse() {
-  const { surveyId } = useParams();
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const { surveys, addSurveyResponse } = useFeedback();
-  
+export function useSurveyLoading(surveyId: string | undefined, surveys: Survey[]) {
   const [survey, setSurvey] = useState<Survey | null>(null);
   const [loading, setLoading] = useState(true);
-  const [currentStep, setCurrentStep] = useState<SurveyStep>('intro');
   const [answers, setAnswers] = useState<{questionId: string, answer: string}[]>([]);
   const [retriesCount, setRetriesCount] = useState(0);
   const [directLocalStorageCheck, setDirectLocalStorageCheck] = useState(false);
-  const [manualRecoveryAttempted, setManualRecoveryAttempted] = useState(false);
-  
-  const { 
-    respondentInfo, 
-    setRespondentInfo,
-    formErrors, 
-    handleInfoSubmit 
-  } = useRespondentForm(() => setCurrentStep('questions'));
+  const { toast } = useToast();
+  const { forceSurveyRecovery } = useSurveyRecovery(surveys);
 
-  const forceSurveyRecovery = useCallback((specificSurveyId: string, silent: boolean = false) => {
+  const handleRetry = useCallback(() => {
+    setLoading(true);
+    setRetriesCount(prev => prev + 1);
+    
     if (process.env.NODE_ENV === 'development') {
-      console.log(`Force recovery for survey: ${specificSurveyId}, silent: ${silent}`);
+      toast({
+        title: "Retrying",
+        description: "Attempting to load the survey again...",
+      });
     }
     
     try {
-      const rawStorage = localStorage.getItem('lovable-surveys');
-      if (rawStorage) {
-        if (rawStorage.includes(specificSurveyId)) {
-          if (process.env.NODE_ENV === 'development') {
-            console.log(`${specificSurveyId} EXISTS in raw localStorage string!`);
-          }
-          
-          try {
-            const allSurveys = JSON.parse(rawStorage);
-            if (process.env.NODE_ENV === 'development') {
-              console.log('All available surveys after force parse:', 
-                allSurveys.map((s: any) => s.id).join(', '));
-            }
-            
-            const targetSurvey = allSurveys.find((s: any) => 
-              s.id === specificSurveyId || 
-              s.id.includes(specificSurveyId.replace('survey-', ''))
-            );
-            
-            if (targetSurvey) {
-              if (process.env.NODE_ENV === 'development') {
-                console.log('FOUND TARGET SURVEY IN FORCE RECOVERY:', targetSurvey);
-              }
-              
-              const surveyToUse = JSON.parse(JSON.stringify(targetSurvey));
-              
-              if (surveyToUse.createdAt && typeof surveyToUse.createdAt !== 'object') {
-                surveyToUse.createdAt = new Date(surveyToUse.createdAt);
-              } else if (surveyToUse.createdAt?._type === 'Date') {
-                surveyToUse.createdAt = new Date(surveyToUse.createdAt.value.iso);
-              } else if (surveyToUse.createdAt === undefined && surveyToUse.createdAt) {
-                surveyToUse.createdAt = new Date(surveyToUse.createdAt);
-                delete surveyToUse.createdAt;
-              }
-              
-              setSurvey(surveyToUse);
-              setAnswers(initializeAnswers(surveyToUse));
-              setLoading(false);
-              
-              localStorage.setItem('lovable-surveys', JSON.stringify(allSurveys));
-              if (process.env.NODE_ENV === 'development') {
-                console.log('REFRESHED localStorage after force recovery');
-              }
-              
-              if (!silent) {
-                toast({
-                  title: "Survey Loaded",
-                  description: `Successfully loaded "${surveyToUse.title}"`,
-                });
-              }
-              
-              return true;
-            }
-          } catch (parseError) {
-            console.error('Error in force recovery parsing:', parseError);
-          }
-        }
-      }
-      
-      const matchingSurvey = surveys.find(s => 
-        s.id === specificSurveyId || 
-        s.id.includes(specificSurveyId.replace('survey-', ''))
-      );
-      
-      if (matchingSurvey) {
+      const storedSurveysRaw = localStorage.getItem('lovable-surveys');
+      if (storedSurveysRaw) {
+        const storedSurveys = JSON.parse(storedSurveysRaw);
+        localStorage.setItem('lovable-surveys', JSON.stringify(storedSurveys));
         if (process.env.NODE_ENV === 'development') {
-          console.log('FOUND TARGET SURVEY IN CONTEXT:', matchingSurvey);
+          console.log('Refreshed localStorage on retry');
         }
-        setSurvey(matchingSurvey);
-        setAnswers(initializeAnswers(matchingSurvey));
-        setLoading(false);
-        return true;
       }
-      
-      return false;
     } catch (error) {
-      console.error('Error in force recovery:', error);
-      return false;
+      console.error('Error refreshing localStorage on retry:', error);
     }
-  }, [surveys, toast]);
+  }, [toast]);
 
   useEffect(() => {
     const loadSurvey = async () => {
@@ -145,11 +68,14 @@ export function useSurveyResponse() {
         if (process.env.NODE_ENV === 'development') {
           console.log('Attempt immediate silent force recovery for survey-1742853415451');
         }
-        const recovered = forceSurveyRecovery('survey-1742853415451', true);
-        if (recovered) {
+        const { surveyToUse, success } = forceSurveyRecovery('survey-1742853415451', true);
+        if (success && surveyToUse) {
           if (process.env.NODE_ENV === 'development') {
             console.log('Early silent recovery successful for survey-1742853415451');
           }
+          setSurvey(surveyToUse);
+          setAnswers(initializeAnswers(surveyToUse));
+          setLoading(false);
           return;
         }
       }
@@ -237,6 +163,7 @@ export function useSurveyResponse() {
         return;
       }
       
+      // Enhanced localStorage lookup for all surveys
       try {
         console.log('Performing enhanced localStorage lookup for all surveys...');
         const rawStorage = localStorage.getItem('lovable-surveys');
@@ -278,6 +205,7 @@ export function useSurveyResponse() {
         console.error('Error in enhanced localStorage access:', error);
       }
       
+      // Direct localStorage lookup
       const localStorageSurvey = findSurveyInLocalStorage(surveyId, setDirectLocalStorageCheck);
       
       if (!localStorageSurvey && decodedSurveyId !== surveyId) {
@@ -306,6 +234,7 @@ export function useSurveyResponse() {
         return;
       }
       
+      // Last resort - check all surveys for any possible match
       try {
         const storedSurveysRaw = localStorage.getItem('lovable-surveys');
         if (storedSurveysRaw) {
@@ -366,98 +295,13 @@ export function useSurveyResponse() {
     loadSurvey();
   }, [surveyId, surveys, retriesCount, forceSurveyRecovery]);
 
-  const handleAnswerChange = (questionId: string, answer: string) => {
-    setAnswers(prev => 
-      prev.map(a => 
-        a.questionId === questionId 
-          ? { ...a, answer } 
-          : a
-      )
-    );
-  };
-
-  const handleSubmitSurvey = (respondentInfo: RespondentInfo, audioBlobs: {[key: string]: Blob} = {}) => {
-    const audioRecordingsCount = Object.keys(audioBlobs).length;
-    console.log('Audio recordings count:', audioRecordingsCount);
-    console.log('Required questions count:', survey?.questions.length);
-    
-    if (audioRecordingsCount < (survey?.questions.length || 0)) {
-      toast({
-        title: "Missing Audio Responses",
-        description: "Please record audio answers for all questions.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    try {
-      if (survey) {
-        console.log('Adding survey response with audio blobs:', Object.keys(audioBlobs).length);
-        addSurveyResponse(survey.id, answers, respondentInfo, audioBlobs);
-        
-        toast({
-          title: "Success",
-          description: "Your feedback has been submitted successfully.",
-        });
-        
-        setCurrentStep('thank-you');
-      } else {
-        throw new Error("Survey not found");
-      }
-    } catch (error) {
-      console.error("Error submitting survey response:", error);
-      toast({
-        title: "Error",
-        description: "There was a problem submitting your response. Please try again.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleRetry = useCallback(() => {
-    setLoading(true);
-    setRetriesCount(prev => prev + 1);
-    
-    if (process.env.NODE_ENV === 'development') {
-      toast({
-        title: "Retrying",
-        description: "Attempting to load the survey again...",
-      });
-    }
-    
-    try {
-      const storedSurveysRaw = localStorage.getItem('lovable-surveys');
-      if (storedSurveysRaw) {
-        const storedSurveys = JSON.parse(storedSurveysRaw);
-        localStorage.setItem('lovable-surveys', JSON.stringify(storedSurveys));
-        if (process.env.NODE_ENV === 'development') {
-          console.log('Refreshed localStorage on retry');
-        }
-      }
-    } catch (error) {
-      console.error('Error refreshing localStorage on retry:', error);
-    }
-  }, [toast]);
-
-  const handleNavigateHome = useCallback(() => {
-    navigate('/brand/dashboard');
-  }, [navigate]);
-
   return {
     survey,
     loading,
-    currentStep,
     answers,
-    formErrors,
-    respondentInfo,
-    setRespondentInfo,
+    setAnswers,
     directLocalStorageCheck,
-    setCurrentStep,
-    handleInfoSubmit,
-    handleAnswerChange,
-    handleSubmitSurvey,
     handleRetry,
-    handleNavigateHome,
     forceSurveyRecovery
   };
 }
