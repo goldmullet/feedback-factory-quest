@@ -2,7 +2,7 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { AlertTriangle, Home, RefreshCw, ArrowLeft } from 'lucide-react';
+import { AlertTriangle, Home, RefreshCw, ArrowLeft, Wand } from 'lucide-react';
 import { MouseEvent } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -83,8 +83,8 @@ const SurveyNotFound = ({
             onClick={handleForceRecovery}
             className="flex items-center gap-2 w-full"
           >
-            <AlertTriangle className="h-4 w-4" />
-            <span>Try Emergency Recovery</span>
+            <Wand className="h-4 w-4" />
+            <span>Advanced Recovery</span>
           </Button>
         )}
         

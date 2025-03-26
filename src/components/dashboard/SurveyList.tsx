@@ -1,6 +1,7 @@
+
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { Plus, MessageSquare, Link as LinkIcon, RefreshCw, BarChart } from 'lucide-react';
+import { Plus, MessageSquare, Link as LinkIcon, RefreshCw, BarChart, Shield } from 'lucide-react';
 import { Survey } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect, useState } from 'react';
@@ -57,6 +58,7 @@ const SurveyList = ({ surveys, brandId, onCreateSurvey, onShareSurvey }: SurveyL
     
     try {
       if (surveys.length > 0) {
+        // Create clean copies of surveys with properly formatted dates
         const cleanSurveys = JSON.parse(JSON.stringify(surveys));
         
         cleanSurveys.forEach((survey: any) => {
@@ -67,6 +69,7 @@ const SurveyList = ({ surveys, brandId, onCreateSurvey, onShareSurvey }: SurveyL
           }
         });
         
+        // Save the cleaned surveys to localStorage
         localStorage.setItem('lovable-surveys', JSON.stringify(cleanSurveys));
         
         toast({
@@ -76,14 +79,29 @@ const SurveyList = ({ surveys, brandId, onCreateSurvey, onShareSurvey }: SurveyL
         
         console.log('Repaired and synchronized survey storage');
       } else {
+        // Check if there are any surveys in localStorage that need to be repaired
         const storedSurveysRaw = localStorage.getItem('lovable-surveys');
         if (storedSurveysRaw && storedSurveysRaw !== '[]' && storedSurveysRaw !== 'null') {
           try {
             const storedSurveys = JSON.parse(storedSurveysRaw);
             if (storedSurveys.length > 0) {
+              // Clean up any corrupted date objects
+              const cleanedSurveys = storedSurveys.map((survey: any) => {
+                if (survey.createdAt && typeof survey.createdAt !== 'object') {
+                  survey.createdAt = new Date(survey.createdAt);
+                } else if (survey.createdAt?._type === 'Date') {
+                  survey.createdAt = new Date(survey.createdAt.value.iso);
+                } else if (!survey.createdAt) {
+                  survey.createdAt = new Date();
+                }
+                return survey;
+              });
+              
+              localStorage.setItem('lovable-surveys', JSON.stringify(cleanedSurveys));
+              
               toast({
-                title: "Storage Verified",
-                description: `Found ${storedSurveys.length} surveys in storage.`,
+                title: "Storage Repaired",
+                description: `Fixed ${cleanedSurveys.length} surveys in storage.`,
               });
             }
           } catch (e) {
@@ -133,7 +151,7 @@ const SurveyList = ({ surveys, brandId, onCreateSurvey, onShareSurvey }: SurveyL
             {isRepairing ? (
               <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
             ) : (
-              <RefreshCw className="mr-2 h-4 w-4" />
+              <Shield className="mr-2 h-4 w-4" />
             )}
             Repair Storage
           </Button>
