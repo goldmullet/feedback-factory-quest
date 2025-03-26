@@ -9,6 +9,7 @@ import UnderstandConsumer from '@/components/home/UnderstandConsumer';
 import AutomatedFeedback from '@/components/home/AutomatedFeedback';
 import CustomerRewards from '@/components/home/CustomerRewards';
 import CallToAction from '@/components/home/CallToAction';
+import AITriggeredEvents from '@/components/home/AITriggeredEvents';
 
 const Index = () => {
   const featuresRef = useRef<HTMLDivElement>(null);
@@ -29,6 +30,7 @@ const Index = () => {
         </div>
         <div id="features">
           <UnderstandConsumer forwardedRef={featuresRef} />
+          <AITriggeredEvents />
           <AutomatedFeedback />
           <CustomerRewards />
         </div>
