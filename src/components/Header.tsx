@@ -76,14 +76,6 @@ const Header = () => {
               >
                 Dashboard
               </Link>
-              <Link 
-                to="/brand/setup" 
-                className={`text-base font-medium transition-colors ${
-                  isActive('/brand/setup') ? 'text-primary' : 'text-foreground/80 hover:text-foreground'
-                }`}
-              >
-                Setup
-              </Link>
             </>
           ) : (
             // Navigation links for non-authenticated users
