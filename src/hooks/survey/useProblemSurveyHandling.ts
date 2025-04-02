@@ -4,7 +4,7 @@ import { Survey } from '@/types';
 import { isProblematicSurveyId } from '@/utils/surveyRecoveryUtils';
 import { debugLog } from '@/utils/debugUtils';
 import { initializeAnswers } from '@/utils/surveyUtils';
-import { fixSurveyIdEncoding } from '@/utils/surveyIdUtils';
+import { fixSurveyIdEncoding, getRecentProblemSurveyIds } from '@/utils/surveyIdUtils';
 
 export function useProblemSurveyHandling(surveys: Survey[]) {
   /**
@@ -92,6 +92,27 @@ export function useProblemSurveyHandling(surveys: Survey[]) {
       if (allSurveys.length === 0) return false;
       
       debugLog('Last resort - checking all surveys for any possible match');
+      
+      // Check if we're dealing with a known problematic ID from the recent list
+      const recentProblemIds = getRecentProblemSurveyIds();
+      if (surveyId && recentProblemIds.includes(surveyId)) {
+        debugLog('This is a recent problematic survey ID, looking for exact match first');
+        const exactMatch = allSurveys.find((s: any) => s.id === surveyId);
+        if (exactMatch) {
+          debugLog('Found exact match for problematic ID:', exactMatch);
+          const fixedSurvey = JSON.parse(JSON.stringify(exactMatch));
+          if (fixedSurvey.createdAt && typeof fixedSurvey.createdAt !== 'object') {
+            fixedSurvey.createdAt = new Date(fixedSurvey.createdAt);
+          } else if (fixedSurvey.createdAt?._type === 'Date') {
+            fixedSurvey.createdAt = new Date(fixedSurvey.createdAt.value.iso);
+          }
+          
+          setSurvey(fixedSurvey);
+          setAnswers(initializeAnswers(fixedSurvey));
+          setLoading(false);
+          return true;
+        }
+      }
       
       // Match by numeric part of ID
       if (surveyId && surveyId.includes('-')) {

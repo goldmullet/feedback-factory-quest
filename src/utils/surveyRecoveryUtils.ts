@@ -9,7 +9,8 @@ const PROBLEMATIC_SURVEY_IDS = [
   'survey-1742852947140', 
   'survey-1742850890608',
   'survey-1742853415451',
-  'survey-1743616937387', // Adding the new problematic ID from the shared link
+  'survey-1743616937387',
+  'survey-1743617288829', // Adding the new problematic ID you mentioned
 ];
 
 /**

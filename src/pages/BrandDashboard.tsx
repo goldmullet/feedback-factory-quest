@@ -30,6 +30,9 @@ const BrandDashboard = () => {
     
     // Log confirmation of survey creation
     console.log(`Survey created with ID: ${surveyId}`);
+    
+    // Return the surveyId to match the expected type
+    return surveyId;
   };
 
   const handleShareSurvey = (surveyId: string) => {

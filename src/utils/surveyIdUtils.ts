@@ -9,6 +9,8 @@
  * @returns The fixed survey ID if possible, or the original if no fix is found
  */
 export const fixSurveyIdEncoding = (surveyId: string): string => {
+  if (!surveyId) return '';
+  
   // Try decoding in case the ID was encoded
   try {
     const decodedId = decodeURIComponent(surveyId);
@@ -25,6 +27,13 @@ export const fixSurveyIdEncoding = (surveyId: string): string => {
     return `survey-${surveyId}`;
   }
   
+  // Clean any unexpected characters that might cause issues
+  const cleanedId = surveyId.replace(/[^\w\d-]/g, '');
+  if (cleanedId !== surveyId) {
+    console.log(`Cleaned survey ID: ${cleanedId}`);
+    return cleanedId;
+  }
+  
   return surveyId;
 };
 
@@ -35,14 +44,30 @@ export const fixSurveyIdEncoding = (surveyId: string): string => {
  * @returns Object with diagnostic information
  */
 export const analyzeSurveyId = (surveyId: string) => {
+  if (!surveyId) return { hasPrefix: false, numericPart: '', isNumeric: false, needsFixing: false };
+  
   const hasPrefix = surveyId.startsWith('survey-');
   const numericPart = hasPrefix ? surveyId.split('-')[1] : surveyId;
   const isNumeric = !isNaN(Number(numericPart));
+  const hasUnexpectedChars = /[^\w\d-]/.test(surveyId);
   
   return {
     hasPrefix,
     numericPart,
     isNumeric,
-    needsFixing: !hasPrefix && isNumeric,
+    hasUnexpectedChars,
+    needsFixing: !hasPrefix && isNumeric || hasUnexpectedChars,
   };
+};
+
+/**
+ * Gets all recent problematic survey IDs
+ * Returns the most recent problematic survey IDs for recovery
+ */
+export const getRecentProblemSurveyIds = (): string[] => {
+  return [
+    'survey-1743617288829',
+    'survey-1743616937387',
+    'survey-1742853415451'
+  ];
 };
