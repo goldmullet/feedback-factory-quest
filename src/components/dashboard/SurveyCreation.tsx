@@ -8,11 +8,12 @@ import { Label } from '@/components/ui/label';
 import { Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Question from '@/components/Question';
+import { persistSurveyToLocalStorage } from '@/context/feedback/surveyUtils';
 
 interface SurveyCreationProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreateSurvey: (title: string, description: string, questions: {text: string, description: string}[]) => void;
+  onCreateSurvey: (title: string, description: string, questions: {text: string, description: string}[]) => string;
 }
 
 const SurveyCreation = ({ open, onOpenChange, onCreateSurvey }: SurveyCreationProps) => {
@@ -90,7 +91,24 @@ const SurveyCreation = ({ open, onOpenChange, onCreateSurvey }: SurveyCreationPr
 
     try {
       // Create survey with valid questions only
-      onCreateSurvey(surveyTitle, surveyDescription, validQuestions);
+      const surveyId = onCreateSurvey(surveyTitle, surveyDescription, validQuestions);
+      
+      // Also save directly to localStorage as a backup to prevent loss
+      try {
+        const storedSurveysRaw = localStorage.getItem('lovable-surveys');
+        if (storedSurveysRaw) {
+          const allSurveys = JSON.parse(storedSurveysRaw);
+          const createdSurvey = allSurveys.find((s: any) => s.id === surveyId);
+          
+          if (createdSurvey) {
+            // Manually ensure the survey is saved to localStorage
+            persistSurveyToLocalStorage(createdSurvey);
+            console.log('Extra backup of survey saved to localStorage');
+          }
+        }
+      } catch (e) {
+        console.error('Error in backup survey save:', e);
+      }
       
       // Show success toast
       toast({

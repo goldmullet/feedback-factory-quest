@@ -1,65 +1,81 @@
 
-import { debugLog } from './debugUtils';
+/**
+ * Utility functions for survey recovery and troubleshooting
+ */
+
+// List of known problematic survey IDs
+const PROBLEMATIC_SURVEY_IDS = [
+  'survey-1742852600629', 
+  'survey-1742852947140', 
+  'survey-1742850890608',
+  'survey-1742853415451',
+  'survey-1743616937387', // Adding the new problematic ID from the shared link
+];
 
 /**
- * Check if the survey ID is one of the known problematic ones
+ * Checks if a survey ID is in the list of known problematic IDs
+ * 
+ * @param surveyId The survey ID to check
+ * @returns True if the survey ID is known to be problematic
  */
-export const isProblematicSurveyId = (surveyId?: string): boolean => {
-  if (!surveyId) return false;
+export const isProblematicSurveyId = (surveyId: string): boolean => {
+  // Check for exact match
+  if (PROBLEMATIC_SURVEY_IDS.includes(surveyId)) {
+    return true;
+  }
   
-  const problematicSurveyIds = [
-    'survey-1742852600629', 
-    'survey-1742852947140', 
-    'survey-1742850890608',
-    'survey-1742853415451'
-  ];
+  // Check if the numeric part is present in any problematic ID
+  if (surveyId.includes('-')) {
+    const numericPart = surveyId.split('-')[1];
+    return PROBLEMATIC_SURVEY_IDS.some(id => id.includes(numericPart));
+  }
   
-  return problematicSurveyIds.some(id => 
-    surveyId === id || surveyId?.includes(id.replace('survey-', ''))
+  // Check if this ID is part of any problematic ID
+  return PROBLEMATIC_SURVEY_IDS.some(id => 
+    id.includes(surveyId) || surveyId.includes(id.replace('survey-', ''))
   );
 };
 
 /**
- * Helper to check and attempt recovery for surveys in localStorage
+ * Gets all available survey IDs from localStorage
+ * 
+ * @returns Array of survey IDs or empty array if none found
  */
-export const checkLocalStorageSurveys = (surveyId?: string): void => {
-  if (!surveyId) return;
-  
+export const getAllAvailableSurveyIds = (): string[] => {
   try {
     const storedSurveysRaw = localStorage.getItem('lovable-surveys');
     if (storedSurveysRaw) {
-      debugLog('All available surveys in localStorage:', JSON.parse(storedSurveysRaw).map((s: any) => s.id).join(', '));
-      const exactMatch = JSON.parse(storedSurveysRaw).some((s: any) => s.id === surveyId);
-      debugLog(`Manual check - Survey ID exact match in localStorage: ${exactMatch}`);
-      
-      // Special silent handling for specific problematic survey IDs
-      if (isProblematicSurveyId(surveyId)) {
-        const idToCheck = surveyId;
-        debugLog(`ATTEMPTING SILENT RECOVERY for ${idToCheck}`);
-        
-        // Look for this specific ID in localStorage
-        const targetSurvey = JSON.parse(storedSurveysRaw).find((s: any) => 
-          s.id === idToCheck || 
-          s.id.includes(idToCheck.replace('survey-', ''))
-        );
-        
-        if (targetSurvey) {
-          debugLog('FOUND TARGET SURVEY:', targetSurvey);
-          
-          // Force the update of localStorage to ensure it's properly formatted
-          try {
-            let updatedSurveys = [...JSON.parse(storedSurveysRaw)];
-            localStorage.setItem('lovable-surveys', JSON.stringify(updatedSurveys));
-            debugLog('REFRESHED localStorage');
-          } catch (e) {
-            console.error('Failed to refresh localStorage:', e);
-          }
-        }
-      }
-    } else {
-      debugLog('NO SURVEYS found in localStorage');
+      const allSurveys = JSON.parse(storedSurveysRaw);
+      return allSurveys.map((s: any) => s.id);
     }
   } catch (error) {
-    debugLog('Error in manual localStorage check:', error);
+    console.error('Error retrieving survey IDs from localStorage:', error);
   }
+  return [];
+};
+
+/**
+ * Fixes common encoding issues with survey IDs
+ * 
+ * @param surveyId The potentially problematic survey ID
+ * @returns The fixed survey ID if possible, or the original if no fix is found
+ */
+export const fixSurveyIdEncoding = (surveyId: string): string => {
+  // Try decoding in case the ID was encoded
+  try {
+    const decodedId = decodeURIComponent(surveyId);
+    if (decodedId !== surveyId) {
+      console.log(`Survey ID was URL encoded. Decoded: ${decodedId}`);
+      return decodedId;
+    }
+  } catch (e) {
+    // Ignore decoding errors
+  }
+  
+  // Check if the ID is missing the 'survey-' prefix
+  if (!surveyId.startsWith('survey-') && !isNaN(Number(surveyId))) {
+    return `survey-${surveyId}`;
+  }
+  
+  return surveyId;
 };
