@@ -54,12 +54,64 @@ export const getAllAvailableSurveyIds = (): string[] => {
   return [];
 };
 
-/**
- * Fixes common encoding issues with survey IDs
- * 
- * @param surveyId The potentially problematic survey ID
- * @returns The fixed survey ID if possible, or the original if no fix is found
- */
+// Add a function to check localStorage for surveys and return diagnostic info
+export const checkLocalStorageSurveys = (surveyId?: string): {
+  available: boolean;
+  count: number;
+  surveysFound: string[];
+  surveyExists: boolean;
+  partialMatches: string[];
+} => {
+  try {
+    const storedSurveysRaw = localStorage.getItem('lovable-surveys');
+    if (!storedSurveysRaw) {
+      return {
+        available: false,
+        count: 0,
+        surveysFound: [],
+        surveyExists: false,
+        partialMatches: []
+      };
+    }
+    
+    const allSurveys = JSON.parse(storedSurveysRaw);
+    const surveyIds = allSurveys.map((s: any) => s.id);
+    
+    if (!surveyId) {
+      return {
+        available: true,
+        count: surveyIds.length,
+        surveysFound: surveyIds,
+        surveyExists: false,
+        partialMatches: []
+      };
+    }
+    
+    const exactMatch = surveyIds.includes(surveyId);
+    const partialMatches = surveyIds.filter(id => 
+      id.includes(surveyId) || surveyId.includes(id)
+    );
+    
+    return {
+      available: true,
+      count: surveyIds.length,
+      surveysFound: surveyIds,
+      surveyExists: exactMatch,
+      partialMatches: exactMatch ? [] : partialMatches
+    };
+    
+  } catch (error) {
+    console.error('Error checking localStorage for surveys:', error);
+    return {
+      available: false,
+      count: 0,
+      surveysFound: [],
+      surveyExists: false,
+      partialMatches: []
+    };
+  }
+};
+
 export const fixSurveyIdEncoding = (surveyId: string): string => {
   // Try decoding in case the ID was encoded
   try {
